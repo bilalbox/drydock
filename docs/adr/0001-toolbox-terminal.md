@@ -1,0 +1,3 @@
+# The terminal is a toolbox container
+
+The lab terminal is xterm.js in the browser, attached to a shell in a container that has Terraform, a local provider mirror, and the AWS, Azure, gcloud, and OCI CLIs. Wasmer was the first idea, because a browser sandbox would have kept the stack free of a second Linux environment. It does not work here: Terraform runs provider plugins as subprocesses, those plugins are native binaries, and the four CLIs are native programs. None of that has a maintained WASIX build, and a browser worker cannot fork them. The toolbox container sits on the Compose network, so the same binaries that a learner would install locally can reach the emulators by service name.

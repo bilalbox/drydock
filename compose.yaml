@@ -1,0 +1,134 @@
+name: drydock
+
+services:
+  labd:
+    build:
+      context: .
+      dockerfile: services/labd/Dockerfile
+    container_name: drydock-labd
+    ports:
+      - "127.0.0.1:8080:8080"
+    environment:
+      CONTENT_DIR: /opt/drydock/content
+      LOCK_PATH: /opt/drydock/providers.lock.json
+      WEB_DIR: /opt/drydock/web
+      PROGRESS_PATH: /data/progress.json
+      WORKSPACES_DIR: /workspaces
+      CHECKS_DIR: /opt/drydock/checks
+      TOOLBOX_CONTAINER: drydock-toolbox
+      INSPECTOR_ORIGIN: http://inspector-gate:4502
+      PORT: "8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./data/workspaces:/workspaces
+      - ./data:/data
+      - ./content:/opt/drydock/content:ro
+      - ./providers.lock.json:/opt/drydock/providers.lock.json:ro
+      - ./compose.yaml:/opt/drydock/compose.yaml:ro
+    depends_on:
+      - toolbox
+      - inspector-gate
+      - floci-ui
+    networks:
+      - drydock
+
+  toolbox:
+    build:
+      context: .
+      dockerfile: services/toolbox/Dockerfile
+    container_name: drydock-toolbox
+    volumes:
+      - ./data/workspaces:/workspaces
+    networks:
+      - drydock
+
+  inspector-gate:
+    build:
+      context: services/inspector-gate
+    container_name: drydock-inspector-gate
+    environment:
+      FLOCI_UI_ORIGIN: http://floci-ui:4500
+      PORT: "4502"
+    networks:
+      - drydock
+
+  floci-ui:
+    image: floci/floci-ui:0.7.0
+    container_name: drydock-floci-ui
+    environment:
+      FLOCI_ENDPOINT: http://floci:4566
+      FLOCI_AZURE_ENDPOINT: http://floci-az:4577
+      FLOCI_GCP_ENDPOINT: http://floci-gcp:4588
+      FLOCI_GCP_PROJECT: floci-local
+      FLOCI_OCI_ENDPOINT: http://floci-oci:4599
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      AWS_REGION: us-east-1
+      PORT: "4500"
+    networks:
+      - drydock
+
+  floci:
+    image: floci/floci:2.4.0
+    profiles: ["on-demand"]
+    container_name: drydock-floci
+    user: "0:0"
+    ports:
+      - "127.0.0.1:4566:4566"
+    environment:
+      FLOCI_HOSTNAME: floci
+      FLOCI_STORAGE_MODE: memory
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - drydock
+
+  floci-az:
+    image: floci/floci-az:0.16.0
+    profiles: ["on-demand"]
+    container_name: drydock-floci-az
+    ports:
+      - "127.0.0.1:4577:4577"
+    environment:
+      FLOCI_AZ_HOSTNAME: floci-az
+      FLOCI_AZ_TLS_ENABLED: "true"
+      FLOCI_AZ_STORAGE_MODE: memory
+    volumes:
+      - ./data/floci-az:/app/data
+    networks:
+      - drydock
+
+  floci-gcp:
+    image: floci/floci-gcp:0.12.0
+    profiles: ["on-demand"]
+    container_name: drydock-floci-gcp
+    user: "0:0"
+    ports:
+      - "127.0.0.1:4588:4588"
+    environment:
+      FLOCI_GCP_HOSTNAME: floci-gcp
+      FLOCI_GCP_STORAGE_MODE: memory
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      drydock:
+        aliases:
+          - container.floci-gcp
+
+  floci-oci:
+    image: floci/floci-oci:0.6.0
+    profiles: ["on-demand"]
+    container_name: drydock-floci-oci
+    ports:
+      - "127.0.0.1:4599:4599"
+    environment:
+      FLOCI_OCI_HOSTNAME: floci-oci
+      FLOCI_OCI_STORAGE_MODE: memory
+      FLOCI_OCI_SERVICES_FUNCTIONS_MOCK: "true"
+      FLOCI_OCI_SERVICES_OKE_MOCK: "true"
+    networks:
+      - drydock
+
+networks:
+  drydock:
+    name: drydock

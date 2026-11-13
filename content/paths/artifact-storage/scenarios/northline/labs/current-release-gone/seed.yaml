@@ -1,0 +1,9 @@
+apply: true
+mutate:
+  - - aws
+    - s3api
+    - put-bucket-lifecycle-configuration
+    - --bucket
+    - northline-artifacts
+    - --lifecycle-configuration
+    - '{"Rules":[{"ID":"expire-current-builds","Status":"Enabled","Filter":{"Prefix":""},"Expiration":{"Days":30}}]}'

@@ -1,0 +1,5 @@
+id: artifact-storage
+title: Artifact storage
+summary: Keep build artifacts private and versioned, expire copies that are no longer needed, and repair a live bucket that has drifted.
+scenarios:
+  - northline

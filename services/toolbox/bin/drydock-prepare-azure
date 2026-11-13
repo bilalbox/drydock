@@ -1,0 +1,23 @@
+#!/bin/sh
+# Trust floci-az's generated CA and point the Azure CLI at the emulator.
+set -eu
+workspace="${1:?workspace}"
+cert_dir="$workspace/.drydock"
+mkdir -p "$cert_dir" "$workspace/.azure"
+curl -fsSL "http://floci-az:4577/_floci/tls-cert" -o "$cert_dir/floci-az.crt"
+cat /etc/ssl/certs/ca-certificates.crt "$cert_dir/floci-az.crt" > "$cert_dir/ca-bundle.crt"
+export AZURE_CONFIG_DIR="$workspace/.azure"
+export REQUESTS_CA_BUNDLE="$cert_dir/ca-bundle.crt"
+export SSL_CERT_FILE="$cert_dir/ca-bundle.crt"
+if ! az cloud show --name drydock >/dev/null 2>&1; then
+  az cloud register --name drydock \
+    --endpoint-active-directory "https://floci-az:4577" \
+    --endpoint-active-directory-graph-resource-id "https://floci-az:4577" \
+    --endpoint-active-directory-resource-id "https://floci-az:4577" \
+    --endpoint-management "https://floci-az:4577" \
+    --endpoint-resource-manager "https://floci-az:4577" \
+    --suffix-acr-login-server-endpoint azurecr.io \
+    --suffix-keyvault-dns vault.azure.net \
+    --suffix-storage-endpoint core.windows.net
+fi
+az cloud set --name drydock

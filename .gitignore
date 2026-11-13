@@ -1,0 +1,38 @@
+# Dependencies
+node_modules/
+
+# Frontend build
+dist/
+dist-test/
+dist-ssr/
+
+# Runtime lab data: workspaces, credentials, Terraform state, progress
+data/*
+!data/.gitkeep
+
+# Local Terraform plugins and state. Course files under content/ stay tracked.
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+crash.*.log
+
+# Local environment
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# OS and editors
+.DS_Store
+Thumbs.db
+.idea/
+*.swp
+*.swo
+*~

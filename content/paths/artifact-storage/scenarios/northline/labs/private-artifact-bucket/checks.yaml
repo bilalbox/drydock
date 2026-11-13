@@ -1,0 +1,18 @@
+checks:
+  - id: bucket-exists
+    argv: ["aws", "s3api", "head-bucket", "--bucket", "northline-artifacts"]
+    expect_exit: 0
+  - id: versioning-enabled
+    argv: ["aws", "s3api", "get-bucket-versioning", "--bucket", "northline-artifacts"]
+    expect_exit: 0
+    expect_json:
+      Status: Enabled
+  - id: public-access-blocked
+    argv: ["aws", "s3api", "get-public-access-block", "--bucket", "northline-artifacts"]
+    expect_exit: 0
+    expect_json:
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        IgnorePublicAcls: true
+        BlockPublicPolicy: true
+        RestrictPublicBuckets: true

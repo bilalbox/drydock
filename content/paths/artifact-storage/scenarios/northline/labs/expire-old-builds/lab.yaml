@@ -1,0 +1,11 @@
+id: expire-old-builds
+title: Expire old builds
+mode: challenge
+clouds: [aws]
+inspector:
+  cloud: aws
+  service: storage
+objective: Expire noncurrent versions in northline-artifacts after 30 days, abort incomplete multipart uploads after 7 days, and leave versioning enabled and public access blocked.
+brief: brief.md
+starter: starter
+checks: checks.yaml

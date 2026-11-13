@@ -1,0 +1,15 @@
+{
+  "name": "drydock-labd",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node src/server.js",
+    "test": "node --test test/*.test.js"
+  },
+  "dependencies": {
+    "dockerode": "^4.0.4",
+    "js-yaml": "^4.1.0",
+    "vscode-ws-jsonrpc": "4.0.3",
+    "ws": "^8.18.3"
+  }
+}

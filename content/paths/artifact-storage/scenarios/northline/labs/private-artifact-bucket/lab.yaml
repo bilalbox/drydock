@@ -1,0 +1,30 @@
+id: private-artifact-bucket
+title: Private artifact bucket
+mode: guided
+clouds: [aws]
+inspector:
+  cloud: aws
+  service: storage
+objective: Create an S3 bucket named northline-artifacts with versioning enabled and all public access blocked.
+brief: ../../scenario.md
+steps: steps.md
+starter: starter
+checks: checks.yaml
+references:
+  - title: Retaining multiple versions of objects with S3 Versioning
+    url: https://docs.aws.amazon.com/AmazonS3/latest/userguide/Versioning.html
+    why: >-
+      Versioning is off until you enable it. Once it is on, an overwrite keeps
+      the previous object, so a bad nightly build can be restored.
+  - title: Blocking public access to your Amazon S3 storage
+    url: https://docs.aws.amazon.com/AmazonS3/latest/userguide/access-control-block-public-access.html
+    why: >-
+      Block Public Access overrides a bucket policy or ACL that would publish
+      the bucket, including ones that already exist. AWS recommends all four
+      settings on the bucket.
+  - title: Security best practices for Amazon S3
+    url: https://docs.aws.amazon.com/AmazonS3/latest/userguide/security-best-practices.html
+    why: >-
+      This is the recommendation list those two settings come from. Block
+      public access unless the bucket must be public, and enable versioning so
+      an overwrite or a mistaken delete can be undone.

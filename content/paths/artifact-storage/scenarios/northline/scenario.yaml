@@ -1,0 +1,6 @@
+id: northline
+title: A private place for build artifacts
+labs:
+  - private-artifact-bucket
+  - expire-old-builds
+  - current-release-gone
