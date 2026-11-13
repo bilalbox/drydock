@@ -68,7 +68,6 @@ Azure, GCP, and OCI provider bundles are generated and covered by unit tests. Th
 
 - `.devcontainer/` — Codespaces machine floor, Docker, and the start command
 - `content/` — paths, scenarios, labs, checks, and the hidden solution
-- `services/labd` — catalog, sessions, emulator lifecycle, grader, terminal
+- `services/labd` — catalog, sessions, emulator lifecycle, grader, inspector gate, terminal
 - `services/toolbox` — Terraform, provider mirror, and the four CLIs
-- `services/inspector-gate` — read-only proxy in front of Floci UI
 - `services/web` — course shell

@@ -16,7 +16,7 @@ services:
       WORKSPACES_DIR: /workspaces
       CHECKS_DIR: /opt/drydock/checks
       TOOLBOX_CONTAINER: drydock-toolbox
-      INSPECTOR_ORIGIN: http://inspector-gate:4502
+      FLOCI_UI_ORIGIN: http://floci-ui:4500
       PORT: "8080"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
@@ -27,7 +27,6 @@ services:
       - ./compose.yaml:/opt/drydock/compose.yaml:ro
     depends_on:
       - toolbox
-      - inspector-gate
       - floci-ui
     networks:
       - drydock
@@ -39,16 +38,6 @@ services:
     container_name: drydock-toolbox
     volumes:
       - ./data/workspaces:/workspaces
-    networks:
-      - drydock
-
-  inspector-gate:
-    build:
-      context: services/inspector-gate
-    container_name: drydock-inspector-gate
-    environment:
-      FLOCI_UI_ORIGIN: http://floci-ui:4500
-      PORT: "4502"
     networks:
       - drydock
 

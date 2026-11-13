@@ -1,13 +1,12 @@
 import { AWS_ENDPOINT_KEYS } from "./awsEndpoints.js";
-import { providerFile } from "./common.js";
 
 const ENDPOINT = "http://floci:4566";
 
-export function materializeAws({ workspace, lock }) {
+export function awsBundle({ workspace, lock }) {
   const version = lock.providers.aws.version;
   const endpoints = AWS_ENDPOINT_KEYS.map((key) => `    ${key} = "${ENDPOINT}"`).join("\n");
-  const files = {
-    "provider.tf": providerFile(`
+  return {
+    hcl: `
 terraform {
   required_providers {
     aws = {
@@ -30,21 +29,20 @@ provider "aws" {
 ${endpoints}
   }
 }
-`),
-    ".aws/config": `[default]
+`,
+    files: {
+      ".aws/config": `[default]
 region = us-east-1
 output = json
 cli_pager =
 s3 =
     addressing_style = path
 `,
-    ".aws/credentials": `[default]
+      ".aws/credentials": `[default]
 aws_access_key_id = test
 aws_secret_access_key = test
 `,
-  };
-  return {
-    files,
+    },
     env: {
       AWS_ACCESS_KEY_ID: "test",
       AWS_SECRET_ACCESS_KEY: "test",
@@ -56,12 +54,8 @@ aws_secret_access_key = test
       AWS_RESPONSE_CHECKSUM_VALIDATION: "when_required",
       AWS_DEFAULT_OUTPUT: "json",
       AWS_PAGER: "",
-      ...(workspace
-        ? {
-            AWS_CONFIG_FILE: `${workspace}/.aws/config`,
-            AWS_SHARED_CREDENTIALS_FILE: `${workspace}/.aws/credentials`,
-          }
-        : {}),
+      AWS_CONFIG_FILE: `${workspace}/.aws/config`,
+      AWS_SHARED_CREDENTIALS_FILE: `${workspace}/.aws/credentials`,
     },
     prepare: [],
   };

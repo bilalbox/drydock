@@ -1,157 +1,140 @@
-import http from "node:http";
 import fs from "node:fs";
+import http from "node:http";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { WebSocketServer } from "ws";
 import { getLab, loadCatalog, publicCatalog } from "./catalog.js";
-import { loadProgress } from "./progress.js";
-import { currentSession, gradeSession, openSession, publicSession, resetSession } from "./session.js";
-import { attachTerminal } from "./toolbox.js";
-import { attachTerraformLsp } from "./terraformLsp.js";
-import { listWorkspace, readWorkspaceFile, writeWorkspaceFile } from "./workspaceFiles.js";
+import { createInspectorHandler } from "./inspector.js";
+import { createSessionManager } from "./session.js";
 
-const PORT = Number(process.env.PORT ?? 8080);
-const CONTENT_DIR = process.env.CONTENT_DIR ?? path.resolve("content");
-const LOCK_PATH = process.env.LOCK_PATH ?? path.resolve("providers.lock.json");
-const WEB_DIR = process.env.WEB_DIR ?? path.resolve("web");
-const PROGRESS_PATH = process.env.PROGRESS_PATH ?? path.resolve("data/progress.json");
-const INSPECTOR_ORIGIN = process.env.INSPECTOR_ORIGIN ?? "http://127.0.0.1:4502";
+const ERROR_STATUS = {
+  INVALID_PATH: 400,
+  INVALID_CONTENT: 400,
+  READ_ONLY: 403,
+  NOT_FOUND: 404,
+  NO_SESSION: 409,
+  SESSION_MISMATCH: 409,
+  TOO_LARGE: 413,
+  BINARY_FILE: 415,
+};
 
-const INSPECTOR_PREFIXES = [
-  "/inspector",
-  "/cloud-explorer",
-  "/console",
-  "/dashboard",
-  "/settings",
-  "/secretsmanager",
-  "/assets",
-  "/api/clouds",
-  "/favicon.ico",
-];
+const CONTENT_TYPES = {
+  ".html": "text/html; charset=utf-8",
+  ".js": "text/javascript; charset=utf-8",
+  ".css": "text/css; charset=utf-8",
+  ".svg": "image/svg+xml",
+  ".json": "application/json",
+  ".map": "application/json",
+  ".woff2": "font/woff2",
+  ".png": "image/png",
+};
 
-const BOOT_SCRIPT = `(() => {
-  const prefix = "/inspector";
-  const path = location.pathname;
-  if (path === prefix || path.startsWith(prefix + "/")) {
-    let next = path.slice(prefix.length) || "/";
-    if (!next.startsWith("/")) next = "/" + next;
-    history.replaceState(null, "", next + location.search + location.hash);
-  }
-})();
-`;
-
-const catalog = loadCatalog(CONTENT_DIR);
-const lock = JSON.parse(fs.readFileSync(LOCK_PATH, "utf8"));
-
-const server = http.createServer(async (req, res) => {
-  try {
-    const url = new URL(req.url ?? "/", "http://localhost");
-    if (req.method === "GET" && url.pathname === "/api/health") {
-      return sendJson(res, 200, { status: "ok" });
-    }
-    if (req.method === "GET" && url.pathname === "/api/catalog") {
-      return sendJson(res, 200, publicCatalog(catalog));
-    }
-    if (req.method === "GET" && url.pathname === "/api/progress") {
-      return sendJson(res, 200, loadProgress(PROGRESS_PATH));
-    }
-    if (req.method === "GET" && url.pathname === "/api/sessions/current") {
-      const session = currentSession();
-      return sendJson(res, 200, session ? publicSession(session) : null);
-    }
-    if (req.method === "POST" && url.pathname === "/api/sessions") {
-      const body = await readJson(req);
-      const found = getLab(catalog, body.labId);
-      if (!found) return sendJson(res, 404, { error: "Unknown lab" });
-      const session = await openSession({ lab: found.lab, lock, progressFile: PROGRESS_PATH });
-      return sendJson(res, 201, session);
-    }
-    if (req.method === "POST" && url.pathname === "/api/sessions/current/reset") {
-      const session = await resetSession({ lock, progressFile: PROGRESS_PATH });
-      return sendJson(res, 200, session);
-    }
-    if (req.method === "POST" && url.pathname === "/api/sessions/current/check") {
-      const attempt = await gradeSession(PROGRESS_PATH);
-      return sendJson(res, 200, attempt);
-    }
-    if (url.pathname === "/api/sessions/current/files" || url.pathname === "/api/sessions/current/file") {
-      return await handleWorkspaceFile(req, res, url);
-    }
-    if (req.method === "GET" && url.pathname === "/inspector-boot.js") {
-      res.writeHead(200, { "content-type": "text/javascript; charset=utf-8", "cache-control": "no-store" });
-      res.end(BOOT_SCRIPT);
-      return;
-    }
-    if (isInspectorPath(url.pathname)) {
-      proxy(req, res, INSPECTOR_ORIGIN);
-      return;
-    }
-    if (req.method === "GET" || req.method === "HEAD") {
-      if (serveStatic(url.pathname, req, res)) return;
-    }
-    sendJson(res, 404, { error: "Not found" });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    console.error("[drydock]", message);
-    if (!res.headersSent) sendJson(res, 500, { error: message });
-  }
-});
-
-const sockets = new WebSocketServer({ noServer: true });
-server.on("upgrade", (req, socket, head) => {
-  const url = new URL(req.url ?? "/", "http://localhost");
-  if (url.pathname === "/lsp/terraform") {
-    sockets.handleUpgrade(req, socket, head, (ws) => {
-      const session = currentSession();
-      if (!session) {
-        ws.close(4409, "No lab is open");
+/** Creates the Drydock HTTP and WebSocket server without binding a port on import. */
+export function createLabdServer({
+  contentDir = process.env.CONTENT_DIR ?? path.resolve("content"),
+  lockPath = process.env.LOCK_PATH ?? path.resolve("providers.lock.json"),
+  webDir = process.env.WEB_DIR ?? path.resolve("web"),
+  catalog = loadCatalog(contentDir),
+  lock = JSON.parse(fs.readFileSync(lockPath, "utf8")),
+  session = createSessionManager({ lock }),
+  inspector = createInspectorHandler(),
+} = {}) {
+  const server = http.createServer(async (req, res) => {
+    try {
+      const url = new URL(req.url ?? "/", "http://localhost");
+      if (req.method === "GET" && url.pathname === "/api/health") {
+        return sendJson(res, 200, { status: "ok" });
+      }
+      if (req.method === "GET" && url.pathname === "/api/catalog") {
+        return sendJson(res, 200, publicCatalog(catalog));
+      }
+      if (req.method === "GET" && url.pathname === "/api/progress") {
+        return sendJson(res, 200, session.progress());
+      }
+      if (req.method === "GET" && url.pathname === "/api/sessions/current") {
+        return sendJson(res, 200, session.current());
+      }
+      if (req.method === "POST" && url.pathname === "/api/sessions") {
+        const body = await readJson(req);
+        const found = getLab(catalog, body.labId);
+        if (!found) return sendJson(res, 404, { error: "Unknown lab" });
+        return sendJson(res, 201, await session.open(found.lab));
+      }
+      if (req.method === "POST" && url.pathname === "/api/sessions/current/reset") {
+        return sendJson(res, 200, await session.reset());
+      }
+      if (req.method === "POST" && url.pathname === "/api/sessions/current/check") {
+        return sendJson(res, 200, await session.grade());
+      }
+      if (url.pathname === "/api/sessions/current/files" || url.pathname === "/api/sessions/current/file") {
+        return await handleWorkspaceFile(req, res, url, session);
+      }
+      if (inspector.matches(url.pathname)) {
+        inspector.handle(req, res, url);
         return;
       }
-      try {
-        attachTerraformLsp(ws, session.workspace);
-      } catch (error) {
-        console.error("[terraform-ls]", error instanceof Error ? error.message : error);
-        ws.close();
+      if ((req.method === "GET" || req.method === "HEAD") && serveStatic(webDir, url.pathname, req, res)) {
+        return;
       }
-    });
-    return;
-  }
-  if (url.pathname !== "/term") {
-    socket.destroy();
-    return;
-  }
-  sockets.handleUpgrade(req, socket, head, (ws) => {
-    const session = currentSession();
-    if (!session) {
-      ws.send(JSON.stringify({ t: "e", d: "Start a lab before using the terminal." }));
-      ws.close();
+      sendJson(res, 404, { error: "Not found" });
+    } catch (error) {
+      const status = ERROR_STATUS[error?.code] ?? 500;
+      const message = error instanceof Error ? error.message : String(error);
+      if (status === 500) console.error("[drydock]", message);
+      if (!res.headersSent) sendJson(res, status, { error: message });
+    }
+  });
+
+  const sockets = new WebSocketServer({ noServer: true });
+  server.on("upgrade", (req, socket, head) => {
+    const url = new URL(req.url ?? "/", "http://localhost");
+    if (url.pathname === "/lsp/terraform") {
+      sockets.handleUpgrade(req, socket, head, (ws) => session.attachLsp(ws));
       return;
     }
-    attachTerminal(ws, { cwd: session.workspace, env: session.env }).catch((error) => {
-      const message = error instanceof Error ? error.message : String(error);
-      if (ws.readyState === ws.OPEN) ws.send(JSON.stringify({ t: "e", d: message }));
-      ws.close();
-    });
+    if (url.pathname === "/term") {
+      sockets.handleUpgrade(req, socket, head, (ws) => session.attachTerminal(ws));
+      return;
+    }
+    socket.destroy();
   });
-});
 
-server.requestTimeout = 600_000;
-server.listen(PORT, () => {
-  console.log(`drydock listening on ${PORT}`);
-});
+  server.requestTimeout = 600_000;
 
-function isInspectorPath(pathname) {
-  return INSPECTOR_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
+  async function close() {
+    session.close();
+    sockets.close();
+    await new Promise((resolve) => server.close(() => resolve()));
+  }
+
+  return { server, session, close };
 }
 
-function serveStatic(pathname, req, res) {
+async function handleWorkspaceFile(req, res, url, session) {
+  if (req.method === "GET" && url.pathname.endsWith("/files")) {
+    return sendJson(res, 200, session.listFiles());
+  }
+  if (req.method === "GET" && url.pathname.endsWith("/file")) {
+    return sendJson(res, 200, session.readFile(url.searchParams.get("path") ?? ""));
+  }
+  if (req.method === "PUT" && url.pathname.endsWith("/file")) {
+    const body = await readJson(req);
+    session.writeFile({ sessionId: body?.sessionId, path: body.path, text: body.text });
+    return sendJson(res, 200, { saved: true });
+  }
+  return sendJson(res, 405, { error: "Method not allowed" });
+}
+
+function serveStatic(webDir, pathname, req, res) {
   const relative = pathname === "/" ? "index.html" : pathname.replace(/^\/+/, "");
   if (relative.includes("\0")) return false;
-  const file = path.resolve(WEB_DIR, relative);
-  if (!file.startsWith(path.resolve(WEB_DIR) + path.sep) && file !== path.resolve(WEB_DIR, "index.html")) {
+  const resolvedRoot = path.resolve(webDir);
+  const file = path.resolve(resolvedRoot, relative);
+  if (!file.startsWith(resolvedRoot + path.sep) && file !== path.resolve(resolvedRoot, "index.html")) {
     return false;
   }
   if (!fs.existsSync(file) || !fs.statSync(file).isFile()) return false;
-  const type = contentType(file);
+  const type = CONTENT_TYPES[path.extname(file)] ?? "application/octet-stream";
   res.writeHead(200, { "content-type": type, "cache-control": "no-cache" });
   if (req.method === "HEAD") {
     res.end();
@@ -159,90 +142,6 @@ function serveStatic(pathname, req, res) {
   }
   fs.createReadStream(file).pipe(res);
   return true;
-}
-
-function contentType(file) {
-  const ext = path.extname(file);
-  const types = {
-    ".html": "text/html; charset=utf-8",
-    ".js": "text/javascript; charset=utf-8",
-    ".css": "text/css; charset=utf-8",
-    ".svg": "image/svg+xml",
-    ".json": "application/json",
-    ".map": "application/json",
-    ".woff2": "font/woff2",
-    ".png": "image/png",
-  };
-  return types[ext] ?? "application/octet-stream";
-}
-
-function proxy(req, res, origin) {
-  const url = new URL(req.url ?? "/", "http://localhost");
-  const target = new URL(origin);
-  const headers = { ...req.headers, host: target.host };
-  delete headers.connection;
-  delete headers["accept-encoding"];
-  const preq = http.request(
-    {
-      protocol: target.protocol,
-      hostname: target.hostname,
-      port: target.port,
-      method: req.method,
-      path: url.pathname + url.search,
-      headers,
-    },
-    (pres) => {
-      res.writeHead(pres.statusCode ?? 502, forwardHeaders(pres.headers));
-      pres.pipe(res);
-    },
-  );
-  preq.on("error", (error) => {
-    if (!res.headersSent) res.writeHead(502, { "content-type": "text/plain; charset=utf-8" });
-    res.end(`Inspector is unavailable: ${error.message}`);
-  });
-  req.pipe(preq);
-}
-
-function forwardHeaders(headers) {
-  const copy = { ...headers };
-  for (const name of [
-    "connection",
-    "transfer-encoding",
-    "keep-alive",
-    "content-security-policy",
-    "content-security-policy-report-only",
-  ]) {
-    delete copy[name];
-  }
-  return copy;
-}
-
-async function handleWorkspaceFile(req, res, url) {
-  const session = currentSession();
-  if (!session) return sendJson(res, 409, { error: "No lab is open" });
-  try {
-    if (req.method === "GET" && url.pathname.endsWith("/files")) {
-      return sendJson(res, 200, {
-        files: listWorkspace(session.workspace),
-        workspaceRoot: session.workspace,
-      });
-    }
-    if (req.method === "GET" && url.pathname.endsWith("/file")) {
-      return sendJson(res, 200, readWorkspaceFile(session.workspace, url.searchParams.get("path") ?? ""));
-    }
-    if (req.method === "PUT" && url.pathname.endsWith("/file")) {
-      const body = await readJson(req);
-      if (body?.sessionId !== session.id) {
-        return sendJson(res, 409, { error: "That lab is no longer open." });
-      }
-      writeWorkspaceFile(session.workspace, body.path, body.text);
-      return sendJson(res, 200, { saved: true });
-    }
-    return sendJson(res, 405, { error: "Method not allowed" });
-  } catch (error) {
-    const status = Number(error?.status) || 500;
-    return sendJson(res, status, { error: error instanceof Error ? error.message : String(error) });
-  }
 }
 
 function sendJson(res, status, body) {
@@ -264,5 +163,13 @@ function readJson(req) {
       }
     });
     req.on("error", reject);
+  });
+}
+
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  const port = Number(process.env.PORT ?? 8080);
+  const { server } = createLabdServer();
+  server.listen(port, () => {
+    console.log(`drydock listening on ${port}`);
   });
 }

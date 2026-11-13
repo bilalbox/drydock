@@ -1,13 +1,10 @@
-import { providerFile } from "./common.js";
-
 const PREPARE = "/opt/drydock/bin/drydock-prepare-azure";
 
-export function materializeAzure({ workspace, lock }) {
+export function azureBundle({ workspace, lock }) {
   const version = lock.providers.azurerm.version;
   const bundle = `${workspace}/.drydock/ca-bundle.crt`;
   return {
-    files: {
-      "provider.tf": providerFile(`
+    hcl: `
 terraform {
   required_providers {
     azurerm = {
@@ -26,8 +23,8 @@ provider "azurerm" {
   client_id       = "11111111-1111-1111-1111-111111111111"
   client_secret   = "floci-az-dev-secret"
 }
-`),
-    },
+`,
+    files: {},
     env: {
       SSL_CERT_FILE: bundle,
       REQUESTS_CA_BUNDLE: bundle,

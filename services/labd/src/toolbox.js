@@ -74,7 +74,7 @@ export async function attachTerminal(ws, { cwd, env }) {
     AttachStderr: true,
     Tty: true,
     WorkingDir: cwd,
-    Env: envList({ ...env, HOME: cwd, TERM: "xterm-256color" }),
+    Env: envList(env),
   });
   const stream = await exec.start({ hijack: true, stdin: true });
   stream.on("data", (chunk) => {

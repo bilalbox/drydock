@@ -31,13 +31,148 @@ const CLOUDS = {
   },
 };
 
-const COMPOSE_FILE = process.env.CLOUD_COMPOSE_FILE ?? "/opt/drydock/compose.yaml";
+/** Creates a Cloud Emulator lifecycle manager behind Docker and HTTP adapters. */
+export function createEmulatorManager({
+  composeFile = process.env.CLOUD_COMPOSE_FILE ?? "/opt/drydock/compose.yaml",
+  docker = () => new Docker({ socketPath: process.env.DOCKER_SOCKET ?? "/var/run/docker.sock" }),
+  fetch = globalThis.fetch,
+  hostname = () => os.hostname(),
+  healthTimeoutMs = 90_000,
+  pollIntervalMs = 1_000,
+  sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
+} = {}) {
+  const getClient = () => (typeof docker === "function" ? docker() : docker);
 
-export function cloudNames() {
-  return Object.keys(CLOUDS);
+  async function ensureClouds(clouds) {
+    if (clouds.length === 0) return;
+    const client = getClient();
+    const projectDir = await hostProjectDir(client, hostname());
+    const document = yaml.load(fs.readFileSync(composeFile, "utf8"));
+    for (const cloud of clouds) {
+      await ensureService(client, document, projectDir, spec(cloud).service);
+      await waitHealthy(cloud);
+    }
+  }
+
+  async function stopClouds(clouds) {
+    if (clouds.length === 0) return;
+    const client = getClient();
+    for (const cloud of clouds) {
+      await stopContainer(client, spec(cloud).container);
+    }
+  }
+
+  async function resetCloud(cloud) {
+    const { origin, container } = spec(cloud);
+    if (await adminReset(origin)) return;
+    const client = getClient();
+    try {
+      await client.getContainer(container).restart();
+    } catch (error) {
+      if (error?.statusCode === 404) throw new Error(`${container} is not running`);
+      throw error;
+    }
+    await waitHealthy(cloud);
+  }
+
+  async function adminReset(origin) {
+    try {
+      const response = await fetch(`${origin}/_admin/reset`, { method: "POST" });
+      return response.status === 204;
+    } catch {
+      return false;
+    }
+  }
+
+  async function waitHealthy(cloud) {
+    const { origin, health } = spec(cloud);
+    const deadline = Date.now() + healthTimeoutMs;
+    let lastError = "emulator did not become healthy";
+    while (Date.now() < deadline) {
+      for (const probe of health) {
+        try {
+          const response = await fetch(`${origin}${probe}`);
+          if (response.ok) return;
+          lastError = `${origin}${probe} returned ${response.status}`;
+        } catch (error) {
+          lastError = error instanceof Error ? error.message : String(error);
+        }
+      }
+      await sleep(pollIntervalMs);
+    }
+    throw new Error(`${cloud} did not become healthy: ${lastError}`);
+  }
+
+  return {
+    cloudNames: () => Object.keys(CLOUDS),
+    ensureClouds,
+    stopClouds,
+    resetCloud,
+  };
 }
 
-export function planContainer(document, serviceName, projectDir) {
+async function ensureService(client, document, projectDir, serviceName) {
+  const plan = planContainer(document, serviceName, projectDir);
+  const existing = client.getContainer(plan.name);
+  try {
+    const info = await existing.inspect();
+    if (!info.State?.Running) await existing.start();
+    return;
+  } catch (error) {
+    if (error?.statusCode !== 404) throw error;
+  }
+  if (!(await imagePresent(client, plan.image))) await pullImage(client, plan.image);
+  const created = await client.createContainer(createOptions(plan, projectDir));
+  await created.start();
+}
+
+async function hostProjectDir(client, selfId) {
+  const info = await client.getContainer(selfId).inspect();
+  const mount = info.Mounts?.find((item) => item.Destination === "/data");
+  if (!mount?.Source) {
+    throw new Error("The lab container has no /data mount, so emulators cannot be started.");
+  }
+  return path.posix.dirname(mount.Source);
+}
+
+async function imagePresent(client, image) {
+  try {
+    await client.getImage(image).inspect();
+    return true;
+  } catch (error) {
+    if (error?.statusCode === 404) return false;
+    throw error;
+  }
+}
+
+function pullImage(client, image) {
+  return new Promise((resolve, reject) => {
+    client.pull(image, (error, stream) => {
+      if (error) {
+        reject(error);
+        return;
+      }
+      client.modem.followProgress(stream, (progressError) => (progressError ? reject(progressError) : resolve()));
+    });
+  });
+}
+
+async function stopContainer(client, name) {
+  try {
+    await client.getContainer(name).stop();
+  } catch (error) {
+    if (error?.statusCode === 304 || error?.statusCode === 404) return;
+    throw error;
+  }
+}
+
+function spec(cloud) {
+  const found = CLOUDS[cloud];
+  if (!found) throw new Error(`Unknown cloud ${cloud}`);
+  return found;
+}
+
+function planContainer(document, serviceName, projectDir) {
   const service = document.services?.[serviceName];
   if (!service?.image) throw new Error(`Compose service ${serviceName} has no image`);
   const network = networkPlan(service);
@@ -56,7 +191,7 @@ export function planContainer(document, serviceName, projectDir) {
   };
 }
 
-export function createOptions(plan, projectDir) {
+function createOptions(plan, projectDir) {
   const exposed = {};
   const bindings = {};
   for (const port of plan.ports) {
@@ -91,135 +226,12 @@ export function createOptions(plan, projectDir) {
   };
 }
 
-export function resolveBind(entry, projectDir) {
+function resolveBind(entry, projectDir) {
   if (typeof entry !== "string") throw new Error("Compose volume entries must be strings");
   const match = /^(.*?):(\/[^:]+)(?::([a-z]+))?$/.exec(entry);
   if (!match) throw new Error(`Unsupported volume entry: ${entry}`);
   const source = match[1].startsWith("/") ? match[1] : path.posix.join(projectDir, match[1]);
   return match[3] ? `${source}:${match[2]}:${match[3]}` : `${source}:${match[2]}`;
-}
-
-export async function ensureClouds(clouds) {
-  for (const cloud of clouds) {
-    await ensureService(spec(cloud).service);
-    await waitHealthy(cloud);
-  }
-}
-
-export async function stopClouds(clouds) {
-  const client = docker();
-  for (const cloud of clouds) {
-    await stopContainer(client, spec(cloud).container);
-  }
-}
-
-export async function resetCloud(cloud) {
-  const { origin, container } = spec(cloud);
-  if (await adminReset(origin)) return;
-  const client = docker();
-  try {
-    await client.getContainer(container).restart();
-  } catch (error) {
-    if (error?.statusCode === 404) throw new Error(`${container} is not running`);
-    throw error;
-  }
-  await waitHealthy(cloud);
-}
-
-async function ensureService(serviceName) {
-  const client = docker();
-  const projectDir = await hostProjectDir(client);
-  const document = yaml.load(fs.readFileSync(COMPOSE_FILE, "utf8"));
-  const plan = planContainer(document, serviceName, projectDir);
-  const existing = client.getContainer(plan.name);
-  try {
-    const info = await existing.inspect();
-    if (!info.State?.Running) await existing.start();
-    return;
-  } catch (error) {
-    if (error?.statusCode !== 404) throw error;
-  }
-  if (!(await imagePresent(client, plan.image))) await pullImage(client, plan.image);
-  const created = await client.createContainer(createOptions(plan, projectDir));
-  await created.start();
-}
-
-async function hostProjectDir(client) {
-  const info = await client.getContainer(os.hostname()).inspect();
-  const mount = info.Mounts?.find((item) => item.Destination === "/data");
-  if (!mount?.Source) {
-    throw new Error("The lab container has no /data mount, so emulators cannot be started.");
-  }
-  return path.posix.dirname(mount.Source);
-}
-
-function docker() {
-  return new Docker({ socketPath: process.env.DOCKER_SOCKET ?? "/var/run/docker.sock" });
-}
-
-async function imagePresent(client, image) {
-  try {
-    await client.getImage(image).inspect();
-    return true;
-  } catch (error) {
-    if (error?.statusCode === 404) return false;
-    throw error;
-  }
-}
-
-function pullImage(client, image) {
-  return new Promise((resolve, reject) => {
-    client.pull(image, (error, stream) => {
-      if (error) {
-        reject(error);
-        return;
-      }
-      client.modem.followProgress(stream, (progressError) => (progressError ? reject(progressError) : resolve()));
-    });
-  });
-}
-
-async function stopContainer(client, name) {
-  try {
-    await client.getContainer(name).stop();
-  } catch (error) {
-    if (error?.statusCode === 304 || error?.statusCode === 404) return;
-    throw error;
-  }
-}
-
-async function adminReset(origin) {
-  try {
-    const response = await fetch(`${origin}/_admin/reset`, { method: "POST" });
-    return response.status === 204;
-  } catch {
-    return false;
-  }
-}
-
-async function waitHealthy(cloud, timeoutMs = 90_000) {
-  const { origin, health } = spec(cloud);
-  const deadline = Date.now() + timeoutMs;
-  let lastError = "emulator did not become healthy";
-  while (Date.now() < deadline) {
-    for (const probe of health) {
-      try {
-        const response = await fetch(`${origin}${probe}`);
-        if (response.ok) return;
-        lastError = `${origin}${probe} returned ${response.status}`;
-      } catch (error) {
-        lastError = error instanceof Error ? error.message : String(error);
-      }
-    }
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-  }
-  throw new Error(`${cloud} did not become healthy: ${lastError}`);
-}
-
-function spec(cloud) {
-  const found = CLOUDS[cloud];
-  if (!found) throw new Error(`Unknown cloud ${cloud}`);
-  return found;
 }
 
 function networkPlan(service) {

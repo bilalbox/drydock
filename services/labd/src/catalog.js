@@ -11,14 +11,6 @@ export function loadCatalog(root) {
   return { paths };
 }
 
-export function seedArgv(lab) {
-  if (!lab.seed) return [];
-  return [
-    ["terraform", "apply", "-auto-approve", "-input=false", "-no-color"],
-    ...lab.seed.mutate,
-  ];
-}
-
 export function getLab(catalog, labId) {
   for (const pathEntry of catalog.paths) {
     for (const scenario of pathEntry.scenarios) {

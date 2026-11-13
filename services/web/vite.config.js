@@ -22,6 +22,8 @@ export default defineConfig({
       "/settings": "http://127.0.0.1:8080",
       "/secretsmanager": "http://127.0.0.1:8080",
       "/assets": "http://127.0.0.1:8080",
+      "/api/clouds": "http://127.0.0.1:8080",
+      "/favicon.ico": "http://127.0.0.1:8080",
       "/term": { target: "ws://127.0.0.1:8080", ws: true },
       "/lsp": { target: "ws://127.0.0.1:8080", ws: true },
     },

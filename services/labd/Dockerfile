@@ -36,7 +36,7 @@ ENV CONTENT_DIR=/opt/drydock/content \
     WORKSPACES_DIR=/workspaces \
     CHECKS_DIR=/opt/drydock/checks \
     TOOLBOX_CONTAINER=drydock-toolbox \
-    INSPECTOR_ORIGIN=http://inspector-gate:4502 \
+    FLOCI_UI_ORIGIN=http://floci-ui:4500 \
     PORT=8080
 EXPOSE 8080
 CMD ["node", "src/server.js"]

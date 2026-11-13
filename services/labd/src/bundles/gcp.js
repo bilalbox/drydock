@@ -1,5 +1,3 @@
-import { providerFile } from "./common.js";
-
 const ORIGIN = "http://floci-gcp:4588";
 
 // Paths match the floci-gcp Terraform compatibility suite, plus GKE host-mode routing.
@@ -33,7 +31,7 @@ const GCLOUD_OVERRIDES = {
   container: ["CONTAINER", `${ORIGIN}/container/`],
 };
 
-export function materializeGcp({ lab, lock }) {
+export function gcpBundle({ lab, lock }) {
   const version = lock.providers.google.version;
   const endpointLines = Object.entries(TERRAFORM_ENDPOINTS)
     .map(([key, value]) => `  ${key} = "${value}"`)
@@ -57,8 +55,7 @@ export function materializeGcp({ lab, lock }) {
     }
   }
   return {
-    files: {
-      "provider.tf": providerFile(`
+    hcl: `
 terraform {
   required_providers {
     google = {
@@ -75,8 +72,8 @@ provider "google" {
 
 ${endpointLines}
 }
-`),
-    },
+`,
+    files: {},
     env,
     prepare: [],
   };

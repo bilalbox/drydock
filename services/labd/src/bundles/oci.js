@@ -1,5 +1,3 @@
-import { providerFile } from "./common.js";
-
 const ENDPOINT = "http://floci-oci:4599";
 const KEY_PATH = "/opt/drydock/oci-dummy.pem";
 // MD5 of the DER public key for services/toolbox/oci-dummy.pem.
@@ -14,15 +12,14 @@ const DEFAULT_CLIENTS = [
   "oci_queue.QueueClient",
 ];
 
-export function materializeOci({ lab, lock }) {
+export function ociBundle({ lab, lock }) {
   const version = lock.providers.oci.version;
   const clients = (lab.services ?? []).some((service) => service.includes("."))
     ? lab.services.filter((service) => service.includes("."))
     : DEFAULT_CLIENTS;
   const overrides = clients.map((client) => `${client}=${ENDPOINT}`).join(";");
   return {
-    files: {
-      "provider.tf": providerFile(`
+    hcl: `
 terraform {
   required_providers {
     oci = {
@@ -40,8 +37,8 @@ provider "oci" {
   region               = "us-ashburn-1"
   disable_auto_retries = true
 }
-`),
-    },
+`,
+    files: {},
     // The provider reads CLIENT_HOST_OVERRIDES from the process environment.
     env: {
       CLIENT_HOST_OVERRIDES: overrides,

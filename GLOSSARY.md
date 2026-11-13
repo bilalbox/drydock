@@ -67,3 +67,11 @@ _Avoid_: Console, clickops, management UI
 **Cloud**:
 One of aws, azure, gcp, or oci. A lab names the clouds it needs.
 _Avoid_: Provider, account, subscription
+
+**Emulator**:
+A local server that stands in for a cloud API during a session.
+_Avoid_: Simulator, mock cloud, fake backend
+
+**Toolbox**:
+The execution environment that runs Terraform and cloud CLIs against the session's workspace and clouds.
+_Avoid_: Runner, sandbox, shell container
