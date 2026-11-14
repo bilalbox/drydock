@@ -25,6 +25,7 @@ const CONTENT_TYPES = {
   ".svg": "image/svg+xml",
   ".json": "application/json",
   ".map": "application/json",
+  ".ttf": "font/ttf",
   ".woff2": "font/woff2",
   ".png": "image/png",
 };

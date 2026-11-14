@@ -30,7 +30,19 @@ const completionKinds = {
   25: monaco.languages.CompletionItemKind.TypeParameter,
 };
 
-export async function startTerraformLanguageClient(workspaceRoot) {
+const markerSeverities = {
+  1: monaco.MarkerSeverity.Error,
+  2: monaco.MarkerSeverity.Warning,
+  3: monaco.MarkerSeverity.Info,
+  4: monaco.MarkerSeverity.Hint,
+};
+
+const markerTags = {
+  1: monaco.MarkerTag.Unnecessary,
+  2: monaco.MarkerTag.Deprecated,
+};
+
+export async function startTerraformLanguageClient(workspaceRoot, { ensureModel } = {}) {
   const protocol = location.protocol === "https:" ? "wss:" : "ws:";
   const webSocket = new WebSocket(`${protocol}//${location.host}/lsp/terraform`);
   await new Promise((resolve, reject) => {
@@ -80,45 +92,219 @@ export async function startTerraformLanguageClient(workspaceRoot) {
     throw error;
   }
 
-  const triggers = [...new Set([...(result?.capabilities?.completionProvider?.triggerCharacters ?? []), '"', ".", "=", "["])];
-  disposables.push(monaco.languages.registerCompletionItemProvider("terraform", {
+  const capabilities = result?.capabilities ?? {};
+
+  async function requestLsp(method, params, token) {
+    if (closed || token?.isCancellationRequested) return null;
+    try {
+      const response = await connection.sendRequest(method, params);
+      if (closed || token?.isCancellationRequested) return null;
+      return response;
+    } catch {
+      return null;
+    }
+  }
+
+  async function ensureModels(locations) {
+    if (!ensureModel || !locations?.length) return;
+    const seen = new Set();
+    await Promise.all(
+      locations.map((loc) => {
+        const key = loc.uri.toString();
+        if (seen.has(key) || monaco.editor.getModel(loc.uri)) return null;
+        seen.add(key);
+        return ensureModel(loc.uri).catch(() => null);
+      }),
+    );
+  }
+
+  async function provideLocationList(method, model, position, token, extra = {}) {
+    const response = await requestLsp(
+      method,
+      {
+        textDocument: { uri: model.uri.toString() },
+        position: toPosition(position),
+        ...extra,
+      },
+      token,
+    );
+    const locations = toLocations(response);
+    await ensureModels(locations);
+    if (token?.isCancellationRequested) return [];
+    return locations;
+  }
+
+  const rawItems = new WeakMap();
+  const triggers = [...new Set([...(capabilities.completionProvider?.triggerCharacters ?? []), '"', ".", "=", "["])];
+  const completionProvider = {
     triggerCharacters: triggers,
-    async provideCompletionItems(model, position, _context, token) {
-      if (closed || token.isCancellationRequested) return { suggestions: [] };
-      try {
-        const response = await connection.sendRequest("textDocument/completion", {
-          textDocument: { uri: model.uri.toString() },
-          position: toPosition(position),
-        });
-        if (token.isCancellationRequested) return { suggestions: [] };
-        const items = Array.isArray(response) ? response : response?.items ?? [];
-        return {
-          incomplete: Boolean(response?.isIncomplete),
-          suggestions: items.map((item) => toSuggestion(item)),
+    async provideCompletionItems(model, position, context, token) {
+      const params = {
+        textDocument: { uri: model.uri.toString() },
+        position: toPosition(position),
+      };
+      if (context) {
+        params.context = {
+          triggerKind: context.triggerKind + 1,
+          ...(context.triggerCharacter ? { triggerCharacter: context.triggerCharacter } : {}),
         };
-      } catch {
-        return { suggestions: [] };
       }
+      const response = await requestLsp("textDocument/completion", params, token);
+      if (!response) return { suggestions: [] };
+      const items = Array.isArray(response) ? response : response.items ?? [];
+      return {
+        incomplete: Boolean(response.isIncomplete),
+        suggestions: items.map((item) => {
+          const suggestion = toSuggestion(item);
+          rawItems.set(suggestion, item);
+          return suggestion;
+        }),
+      };
     },
-  }));
+  };
+  if (capabilities.completionProvider?.resolveProvider) {
+    completionProvider.resolveCompletionItem = async (item, token) => {
+      const raw = rawItems.get(item);
+      if (!raw) return item;
+      const resolved = await requestLsp("completionItem/resolve", raw, token);
+      if (!resolved) return item;
+      applyResolvedSuggestion(item, resolved);
+      return item;
+    };
+  }
+  disposables.push(monaco.languages.registerCompletionItemProvider("terraform", completionProvider));
+
   disposables.push(monaco.languages.registerHoverProvider("terraform", {
     async provideHover(model, position, token) {
-      if (closed || token.isCancellationRequested) return null;
-      try {
-        const response = await connection.sendRequest("textDocument/hover", {
+      const response = await requestLsp(
+        "textDocument/hover",
+        {
           textDocument: { uri: model.uri.toString() },
           position: toPosition(position),
-        });
-        if (!response || token.isCancellationRequested) return null;
-        return {
-          contents: [toMarkdown(response.contents)],
-          range: response.range ? toRange(response.range) : undefined,
-        };
-      } catch {
-        return null;
-      }
+        },
+        token,
+      );
+      if (!response) return null;
+      const contents = toHoverContents(response.contents);
+      if (contents.length === 0) return null;
+      return {
+        contents,
+        range: response.range ? toRange(response.range) : undefined,
+      };
     },
   }));
+
+  if (capabilities.definitionProvider) {
+    disposables.push(monaco.languages.registerDefinitionProvider("terraform", {
+      provideDefinition: (model, position, token) =>
+        provideLocationList("textDocument/definition", model, position, token),
+    }));
+  }
+
+  if (capabilities.declarationProvider) {
+    disposables.push(monaco.languages.registerDeclarationProvider("terraform", {
+      provideDeclaration: (model, position, token) =>
+        provideLocationList("textDocument/declaration", model, position, token),
+    }));
+  }
+
+  if (capabilities.referencesProvider) {
+    disposables.push(monaco.languages.registerReferenceProvider("terraform", {
+      provideReferences: (model, position, context, token) =>
+        provideLocationList("textDocument/references", model, position, token, {
+          context: { includeDeclaration: Boolean(context?.includeDeclaration) },
+        }),
+    }));
+  }
+
+  if (capabilities.documentSymbolProvider) {
+    disposables.push(monaco.languages.registerDocumentSymbolProvider("terraform", {
+      async provideDocumentSymbols(model, token) {
+        const response = await requestLsp(
+          "textDocument/documentSymbol",
+          { textDocument: { uri: model.uri.toString() } },
+          token,
+        );
+        if (!Array.isArray(response)) return [];
+        return response.map(toDocumentSymbol);
+      },
+    }));
+  }
+
+  if (capabilities.signatureHelpProvider) {
+    const triggerChars = capabilities.signatureHelpProvider.triggerCharacters ?? ["(", ","];
+    const retriggerChars = capabilities.signatureHelpProvider.retriggerCharacters ?? [","];
+    disposables.push(monaco.languages.registerSignatureHelpProvider("terraform", {
+      signatureHelpTriggerCharacters: triggerChars,
+      signatureHelpRetriggerCharacters: retriggerChars,
+      async provideSignatureHelp(model, position, token, context) {
+        const response = await requestLsp(
+          "textDocument/signatureHelp",
+          {
+            textDocument: { uri: model.uri.toString() },
+            position: toPosition(position),
+            context: context ? {
+              triggerKind: context.triggerKind,
+              isRetrigger: Boolean(context.isRetrigger),
+              ...(context.triggerCharacter ? { triggerCharacter: context.triggerCharacter } : {}),
+            } : undefined,
+          },
+          token,
+        );
+        if (!response?.signatures?.length) return null;
+        return {
+          value: {
+            signatures: response.signatures.map(toSignatureInfo),
+            activeSignature: response.activeSignature ?? 0,
+            activeParameter: response.activeParameter ?? 0,
+          },
+          dispose() {},
+        };
+      },
+    }));
+  }
+
+  if (capabilities.documentFormattingProvider) {
+    disposables.push(monaco.languages.registerDocumentFormattingEditProvider("terraform", {
+      async provideDocumentFormattingEdits(model, options, token) {
+        const response = await requestLsp(
+          "textDocument/formatting",
+          {
+            textDocument: { uri: model.uri.toString() },
+            options: {
+              tabSize: options.tabSize,
+              insertSpaces: options.insertSpaces,
+            },
+          },
+          token,
+        );
+        if (!Array.isArray(response)) return [];
+        return response.map(toTextEdit);
+      },
+    }));
+  }
+
+  if (capabilities.documentLinkProvider) {
+    disposables.push(monaco.languages.registerLinkProvider("terraform", {
+      async provideLinks(model, token) {
+        const response = await requestLsp(
+          "textDocument/documentLink",
+          { textDocument: { uri: model.uri.toString() } },
+          token,
+        );
+        if (!Array.isArray(response)) return { links: [] };
+        return {
+          links: response
+            .filter((link) => link.range && link.target)
+            .map((link) => ({
+              range: toRange(link.range),
+              url: link.target,
+              tooltip: link.tooltip,
+            })),
+        };
+      },
+    }));
+  }
 
   const sync = (model) => {
     if (closed || synced.has(model) || model.getLanguageId() !== "terraform" || model.isDisposed()) return;
@@ -147,6 +333,7 @@ export async function startTerraformLanguageClient(workspaceRoot) {
     disposables.push(content, closing);
   };
   disposables.push(monaco.editor.onDidCreateModel(sync));
+  disposables.push(monaco.editor.onDidChangeModelLanguage(({ model }) => sync(model)));
   for (const model of monaco.editor.getModels()) sync(model);
 
   return {
@@ -155,7 +342,7 @@ export async function startTerraformLanguageClient(workspaceRoot) {
       closed = true;
       for (const disposable of disposables) disposable.dispose();
       for (const model of synced) {
-        monaco.editor.setModelMarkers(model, "terraform-ls", []);
+        if (!model.isDisposed()) monaco.editor.setModelMarkers(model, "terraform-ls", []);
       }
       synced.clear();
       connection.dispose();
@@ -179,15 +366,36 @@ function clientCapabilities() {
       completion: {
         completionItem: {
           snippetSupport: true,
+          commitCharactersSupport: true,
           documentationFormat: ["markdown", "plaintext"],
+          deprecatedSupport: true,
+          preselectSupport: true,
+          tagSupport: { valueSet: [1] },
+          insertReplaceSupport: true,
+          resolveSupport: { properties: ["documentation", "detail", "additionalTextEdits"] },
+          labelDetailsSupport: true,
         },
         contextSupport: true,
       },
       hover: {
         contentFormat: ["markdown", "plaintext"],
       },
+      signatureHelp: {
+        signatureInformation: {
+          documentationFormat: ["markdown", "plaintext"],
+          parameterInformation: { labelOffsetSupport: true },
+        },
+        contextSupport: true,
+      },
+      definition: { linkSupport: true },
+      declaration: { linkSupport: true },
+      references: {},
+      documentSymbol: { hierarchicalDocumentSymbolSupport: true },
+      formatting: {},
+      documentLink: { tooltipSupport: true },
       publishDiagnostics: {
         relatedInformation: true,
+        tagSupport: { valueSet: [1, 2] },
       },
     },
   };
@@ -206,15 +414,16 @@ function toRange(range) {
   };
 }
 
-function toMarker(diagnostic) {
-  const severities = {
-    1: monaco.MarkerSeverity.Error,
-    2: monaco.MarkerSeverity.Warning,
-    3: monaco.MarkerSeverity.Info,
-    4: monaco.MarkerSeverity.Hint,
-  };
+function toTextEdit(edit) {
   return {
-    severity: severities[diagnostic.severity] ?? monaco.MarkerSeverity.Error,
+    range: toRange(edit.range),
+    text: edit.newText,
+  };
+}
+
+function toMarker(diagnostic) {
+  const marker = {
+    severity: markerSeverities[diagnostic.severity] ?? monaco.MarkerSeverity.Error,
     message: diagnostic.message,
     startLineNumber: diagnostic.range.start.line + 1,
     startColumn: diagnostic.range.start.character + 1,
@@ -223,6 +432,18 @@ function toMarker(diagnostic) {
     source: diagnostic.source ?? "terraform-ls",
     code: typeof diagnostic.code === "object" ? diagnostic.code?.value : diagnostic.code,
   };
+  if (Array.isArray(diagnostic.tags) && diagnostic.tags.length > 0) {
+    const tags = diagnostic.tags.map((tag) => markerTags[tag]).filter(Boolean);
+    if (tags.length > 0) marker.tags = tags;
+  }
+  if (Array.isArray(diagnostic.relatedInformation) && diagnostic.relatedInformation.length > 0) {
+    marker.relatedInformation = diagnostic.relatedInformation.map((info) => ({
+      resource: monaco.Uri.parse(info.location.uri),
+      ...toRange(info.location.range),
+      message: info.message,
+    }));
+  }
+  return marker;
 }
 
 function toSuggestion(item) {
@@ -236,17 +457,110 @@ function toSuggestion(item) {
     filterText: item.filterText ?? label,
     insertText: edit?.newText ?? item.insertText ?? label,
   };
+  if (item.preselect) suggestion.preselect = true;
+  if (Array.isArray(item.commitCharacters) && item.commitCharacters.length > 0) {
+    suggestion.commitCharacters = item.commitCharacters;
+  }
+  if (item.deprecated || item.tags?.includes(1)) {
+    suggestion.tags = [monaco.languages.CompletionItemTag.Deprecated];
+  }
   const documentation = toMarkdown(item.documentation);
   if (documentation.value) suggestion.documentation = documentation;
   if (item.insertTextFormat === 2) {
     suggestion.insertTextRules = monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet;
   }
+  if (Array.isArray(item.additionalTextEdits) && item.additionalTextEdits.length > 0) {
+    suggestion.additionalTextEdits = item.additionalTextEdits.map(toTextEdit);
+  }
   if (item.command?.command === "editor.action.triggerSuggest") {
     suggestion.command = { id: item.command.command, title: item.command.title || "Suggest" };
   }
-  const range = edit?.replace ?? edit?.range ?? edit?.insert;
-  if (range) suggestion.range = toRange(range);
+  if (edit?.insert && edit?.replace) {
+    suggestion.range = { insert: toRange(edit.insert), replace: toRange(edit.replace) };
+  } else {
+    const range = edit?.replace ?? edit?.range ?? edit?.insert;
+    if (range) suggestion.range = toRange(range);
+  }
   return suggestion;
+}
+
+function applyResolvedSuggestion(suggestion, resolved) {
+  if (resolved.detail !== undefined) suggestion.detail = resolved.detail;
+  const documentation = toMarkdown(resolved.documentation);
+  if (documentation.value) suggestion.documentation = documentation;
+  if (Array.isArray(resolved.additionalTextEdits) && resolved.additionalTextEdits.length > 0) {
+    suggestion.additionalTextEdits = resolved.additionalTextEdits.map(toTextEdit);
+  }
+}
+
+function toLocations(response) {
+  if (!response) return [];
+  const list = Array.isArray(response) ? response : [response];
+  return list
+    .map((entry) => {
+      if (entry?.targetUri && entry?.targetRange) {
+        return {
+          uri: monaco.Uri.parse(entry.targetUri),
+          range: toRange(entry.targetRange),
+          originSelectionRange: entry.originSelectionRange ? toRange(entry.originSelectionRange) : undefined,
+          targetSelectionRange: entry.targetSelectionRange ? toRange(entry.targetSelectionRange) : undefined,
+        };
+      }
+      if (entry?.uri && entry?.range) {
+        return {
+          uri: monaco.Uri.parse(entry.uri),
+          range: toRange(entry.range),
+        };
+      }
+      return null;
+    })
+    .filter(Boolean);
+}
+
+function toDocumentSymbol(sym) {
+  if (sym.location) {
+    const range = toRange(sym.location.range);
+    return {
+      name: sym.name,
+      detail: sym.containerName ?? "",
+      kind: Math.max(0, (sym.kind ?? 1) - 1),
+      tags: sym.tags ?? [],
+      range,
+      selectionRange: range,
+    };
+  }
+  return {
+    name: sym.name,
+    detail: sym.detail ?? "",
+    kind: Math.max(0, (sym.kind ?? 1) - 1),
+    tags: sym.tags ?? [],
+    range: toRange(sym.range),
+    selectionRange: toRange(sym.selectionRange ?? sym.range),
+    children: Array.isArray(sym.children) ? sym.children.map(toDocumentSymbol) : undefined,
+  };
+}
+
+function toSignatureInfo(sig) {
+  const doc = toMarkdown(sig.documentation);
+  return {
+    label: sig.label,
+    documentation: doc.value ? doc : undefined,
+    parameters: (sig.parameters ?? []).map((param) => {
+      const paramDoc = toMarkdown(param.documentation);
+      return {
+        label: param.label,
+        documentation: paramDoc.value ? paramDoc : undefined,
+      };
+    }),
+  };
+}
+
+function toHoverContents(contents) {
+  if (!contents) return [];
+  const parts = Array.isArray(contents) ? contents : [contents];
+  return parts
+    .map((part) => toMarkdown(part))
+    .filter((md) => md.value.trim().length > 0);
 }
 
 function toMarkdown(contents) {
@@ -254,8 +568,11 @@ function toMarkdown(contents) {
   if (typeof contents === "string") return { value: contents };
   if (Array.isArray(contents)) {
     return {
-      value: contents.map((part) => (typeof part === "string" ? part : part.value ?? "")).join("\n\n"),
+      value: contents.map((part) => toMarkdown(part).value).filter(Boolean).join("\n\n"),
     };
+  }
+  if (typeof contents.language === "string") {
+    return { value: `\`\`\`${contents.language}\n${contents.value ?? ""}\n\`\`\`` };
   }
   return { value: contents.value ?? "" };
 }

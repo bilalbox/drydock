@@ -1,4 +1,35 @@
 import * as monaco from "monaco-editor/editor/editor.api.js";
+import "monaco-editor/editor/browser/coreCommands.js";
+import "monaco-editor/editor/contrib/bracketMatching/browser/bracketMatching.js";
+import "monaco-editor/editor/contrib/clipboard/browser/clipboard.js";
+import "monaco-editor/editor/contrib/codeAction/browser/codeActionContributions.js";
+import "monaco-editor/editor/contrib/comment/browser/comment.js";
+import "monaco-editor/editor/contrib/contextmenu/browser/contextmenu.js";
+import "monaco-editor/editor/contrib/cursorUndo/browser/cursorUndo.js";
+import "monaco-editor/editor/contrib/documentSymbols/browser/documentSymbols.js";
+import "monaco-editor/editor/contrib/find/browser/findController.js";
+import "monaco-editor/editor/contrib/folding/browser/folding.js";
+import "monaco-editor/editor/contrib/format/browser/formatActions.js";
+import "monaco-editor/editor/contrib/gotoError/browser/gotoError.js";
+import "monaco-editor/editor/contrib/gotoError/browser/markerSelectionStatus.js";
+import "monaco-editor/editor/contrib/gotoSymbol/browser/goToCommands.js";
+import "monaco-editor/editor/contrib/gotoSymbol/browser/link/goToDefinitionAtPosition.js";
+import "monaco-editor/editor/contrib/hover/browser/hoverContribution.js";
+import "monaco-editor/editor/contrib/indentation/browser/indentation.js";
+import "monaco-editor/editor/contrib/linesOperations/browser/linesOperations.js";
+import "monaco-editor/editor/contrib/links/browser/links.js";
+import "monaco-editor/editor/contrib/multicursor/browser/multicursor.js";
+import "monaco-editor/editor/contrib/parameterHints/browser/parameterHints.js";
+import "monaco-editor/editor/contrib/readOnlyMessage/browser/contribution.js";
+import "monaco-editor/editor/contrib/smartSelect/browser/smartSelect.js";
+import "monaco-editor/editor/contrib/snippet/browser/snippetController2.js";
+import "monaco-editor/editor/contrib/suggest/browser/suggestController.js";
+import "monaco-editor/editor/contrib/wordHighlighter/browser/wordHighlighter.js";
+import "monaco-editor/editor/contrib/wordOperations/browser/wordOperations.js";
+import "monaco-editor/editor/standalone/browser/quickAccess/standaloneCommandsQuickAccess.js";
+import "monaco-editor/editor/standalone/browser/quickAccess/standaloneGotoLineQuickAccess.js";
+import "monaco-editor/editor/standalone/browser/quickAccess/standaloneGotoSymbolQuickAccess.js";
+import "monaco-editor/editor/standalone/browser/referenceSearch/standaloneReferenceSearch.js";
 import editorWorker from "monaco-editor/editor/editor.worker.js?worker";
 
 self.MonacoEnvironment = {
@@ -16,6 +47,29 @@ export function ensureTerraformLanguage() {
     id: "terraform",
     extensions: [".tf", ".tfvars", ".hcl"],
     aliases: ["Terraform", "terraform", "HCL"],
+  });
+  monaco.languages.setLanguageConfiguration("terraform", {
+    comments: {
+      lineComment: "#",
+      blockComment: ["/*", "*/"],
+    },
+    brackets: [
+      ["{", "}"],
+      ["[", "]"],
+      ["(", ")"],
+    ],
+    autoClosingPairs: [
+      { open: "{", close: "}" },
+      { open: "[", close: "]" },
+      { open: "(", close: ")" },
+      { open: '"', close: '"', notIn: ["string"] },
+    ],
+    surroundingPairs: [
+      { open: "{", close: "}" },
+      { open: "[", close: "]" },
+      { open: "(", close: ")" },
+      { open: '"', close: '"' },
+    ],
   });
   monaco.languages.setMonarchTokensProvider("terraform", {
     keywords: [
@@ -109,6 +163,13 @@ export function ensureTerraformLanguage() {
       "editorCursor.foreground": "#9a4118",
       "editorWidget.background": "#fffaf3",
       "editorWidget.border": "#e2d5c4",
+      "editorHoverWidget.background": "#fffaf3",
+      "editorHoverWidget.border": "#d6c5b0",
+      "editorSuggestWidget.background": "#fffaf3",
+      "editorSuggestWidget.border": "#d6c5b0",
+      "editorSuggestWidget.selectedBackground": "#efe4d6",
+      "editorSuggestWidget.highlightForeground": "#9a4118",
+      "editorSuggestWidget.focusHighlightForeground": "#6f2d10",
     },
   });
 }
@@ -131,11 +192,24 @@ export function createWorkspaceEditor(node) {
     tabSize: 2,
     padding: { top: 12, bottom: 12 },
     renderLineHighlight: "line",
+    fixedOverflowWidgets: true,
     wordBasedSuggestions: "off",
-    quickSuggestionsDelay: 0,
+    quickSuggestionsDelay: 50,
     quickSuggestions: { other: true, comments: false, strings: true },
     suggestOnTriggerCharacters: true,
-    suggest: { showWords: false },
+    suggest: {
+      showWords: false,
+      showStatusBar: true,
+      snippetsPreventQuickSuggestions: false,
+    },
+    hover: {
+      enabled: "on",
+      delay: 300,
+      sticky: true,
+    },
+    parameterHints: {
+      enabled: true,
+    },
   });
 }
 

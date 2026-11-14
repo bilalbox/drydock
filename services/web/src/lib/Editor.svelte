@@ -22,6 +22,7 @@
   let workspaceRoot = "";
   let languageClient;
   const models = [];
+  const pendingModels = new Map();
 
   $effect(() => {
     shown = active;
@@ -38,6 +39,29 @@
     };
     window.addEventListener("keydown", onKey);
     editor = createWorkspaceEditor(node);
+    const opener = monaco.editor.registerEditorOpener({
+      async openCodeEditor(source, resource, selectionOrPosition) {
+        if (source !== editor || !alive) return false;
+        const rel = relativePath(resource);
+        if (!rel) return false;
+        await openFile(rel);
+        if (!alive || currentPath !== rel) return false;
+        if (selectionOrPosition) {
+          const range = selectionOrPosition.endLineNumber !== undefined
+            ? selectionOrPosition
+            : {
+                startLineNumber: selectionOrPosition.lineNumber,
+                startColumn: selectionOrPosition.column,
+                endLineNumber: selectionOrPosition.lineNumber,
+                endColumn: selectionOrPosition.column,
+              };
+          editor.setSelection(range);
+          editor.revealRangeInCenter(range);
+        }
+        editor.focus();
+        return true;
+      },
+    });
     disposable = editor.onDidChangeModelContent(() => {
       if (!alive || applying || readOnly) return;
       dirty = editor.getValue() !== savedText;
@@ -61,6 +85,7 @@
           keepalive: true,
         });
       }
+      opener?.dispose();
       disposable?.dispose();
       languageClient?.stop();
       editor?.dispose();
@@ -92,7 +117,7 @@
 
   async function connectLanguageServer() {
     try {
-      const client = await startTerraformLanguageClient(workspaceRoot);
+      const client = await startTerraformLanguageClient(workspaceRoot, { ensureModel });
       if (!alive) {
         await client.stop();
         return;
@@ -104,6 +129,30 @@
       lspError = "Schema completion is unavailable.";
       console.error(error);
     }
+  }
+
+  async function ensureModel(uri) {
+    if (!alive || !workspaceRoot) return null;
+    const existing = monaco.editor.getModel(uri);
+    if (existing && !existing.isDisposed()) return existing;
+    const rel = relativePath(uri);
+    if (!rel) return null;
+    const key = uri.toString();
+    if (pendingModels.has(key)) return pendingModels.get(key);
+    const promise = (async () => {
+      const response = await fetch(`/api/sessions/current/file?path=${encodeURIComponent(rel)}`);
+      const body = await response.json().catch(() => ({}));
+      if (!alive || !response.ok) return null;
+      const current = monaco.editor.getModel(uri);
+      if (current && !current.isDisposed()) return current;
+      const model = monaco.editor.createModel(body.text, languageFor(body.path), uri);
+      models.push(model);
+      return model;
+    })().finally(() => {
+      pendingModels.delete(key);
+    });
+    pendingModels.set(key, promise);
+    return promise;
   }
 
   async function openFile(filePath) {
@@ -136,7 +185,7 @@
       model = monaco.editor.createModel(body.text, languageFor(body.path), uri);
       models.push(model);
     } else {
-      model.setValue(body.text);
+      if (model.getValue() !== body.text) model.setValue(body.text);
       monaco.editor.setModelLanguage(model, languageFor(body.path));
     }
     editor.setModel(model);
@@ -150,6 +199,13 @@
     const base = root.replace(/[\\/]+$/, "");
     const relative = filePath.replace(/^[\\/]+/, "");
     return `${base}/${relative}`;
+  }
+
+  function relativePath(uri) {
+    if (!workspaceRoot || uri?.scheme !== "file") return "";
+    const base = workspaceRoot.replace(/[\\/]+$/, "");
+    if (!uri.path.startsWith(`${base}/`)) return "";
+    return uri.path.slice(base.length + 1);
   }
 
   function schedule() {
