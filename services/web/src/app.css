@@ -23,7 +23,7 @@ body { background: var(--paper); }
 
 a { color: var(--rust-deep); }
 
-button, .mark, .meta, .status, .tabs, .busy {
+button, .button-link, .mark, .meta, .status, .tabs, .busy, .attempt-banner, .check-badge {
   font-family: "Avenir Next", "Segoe UI", sans-serif;
 }
 
@@ -111,7 +111,7 @@ aside {
 
 .actions { display: flex; gap: 0.5rem; margin: 0.8rem 0; }
 
-button {
+button, .button-link {
   border: 1px solid var(--rust);
   background: var(--rust);
   color: #fffaf3;
@@ -119,7 +119,17 @@ button {
   cursor: pointer;
 }
 
-button.quiet, button.on {
+.button-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.88rem;
+  font-weight: 600;
+  line-height: 1.25;
+  text-decoration: none;
+}
+
+button.quiet, button.on, .button-link.quiet {
   background: transparent;
   color: var(--ink);
 }
@@ -134,11 +144,131 @@ button:focus-visible, a:focus-visible {
 .busy { color: var(--rust-deep); }
 .error { color: var(--fail); }
 
-.checks { margin: 0.4rem 0 1rem; }
-.checks li { padding: 0.35rem 0; border-top: 1px solid var(--line); }
+.attempt {
+  margin: 0.6rem 0 1.1rem;
+  padding: 0.75rem 0.85rem;
+  border: 1px solid var(--line);
+  border-left-width: 4px;
+  background: var(--paper-2);
+}
+
+.attempt.is-pass {
+  border-color: #b7d2bc;
+  border-left-color: var(--pass);
+  background: #edf5ef;
+}
+
+.attempt.is-fail {
+  border-color: #dfbdbd;
+  border-left-color: var(--fail);
+  background: #fbeeee;
+}
+
+.attempt-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.attempt-icon {
+  flex: none;
+  width: 1.55rem;
+  height: 1.55rem;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #fffaf3;
+}
+
+.attempt.is-pass .attempt-icon { background: var(--pass); }
+.attempt.is-fail .attempt-icon { background: var(--fail); }
+
+.attempt-copy { min-width: 0; }
+
+.attempt-title {
+  margin: 0;
+  font-weight: 700;
+  font-size: 0.95rem;
+  line-height: 1.25;
+}
+
+.attempt.is-pass .attempt-title { color: var(--pass); }
+.attempt.is-fail .attempt-title { color: var(--fail); }
+
+.attempt-meta {
+  margin: 0.1rem 0 0;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.attempt-next {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-top: 0.65rem;
+}
+
+.attempt.is-pass .button-link:not(.quiet) {
+  border-color: var(--pass);
+  background: var(--pass);
+}
+
+.attempt.is-pass .button-link.quiet {
+  border-color: #96ba9d;
+  background: var(--paper-2);
+}
+
+.checks { margin: 0.65rem 0 0; }
+
+.checks li {
+  padding: 0.45rem 0 0.45rem 0.55rem;
+  border-top: 1px solid var(--line);
+  border-left: 3px solid transparent;
+}
+
+.attempt.is-pass .checks li { border-top-color: #cde0d0; }
+.attempt.is-fail .checks li { border-top-color: #ebd0d0; }
+
+.checks li.pass { border-left-color: var(--pass); }
+.checks li.fail { border-left-color: var(--fail); }
+
+.check-row {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+}
+
+.check-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.1rem 0.4rem;
+  border-radius: 3px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #fffaf3;
+}
+
+.checks .pass .check-badge { background: var(--pass); }
+.checks .fail .check-badge { background: var(--fail); }
+
 .checks .pass strong { color: var(--pass); }
 .checks .fail strong { color: var(--fail); }
-.checks span { display: block; color: var(--muted); font-size: 0.9rem; }
+
+.check-detail {
+  display: block;
+  margin-top: 0.25rem;
+  color: var(--muted);
+  font-size: 0.88rem;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
 
 .prose :global(p),
 .why-note,

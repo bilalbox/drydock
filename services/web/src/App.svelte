@@ -24,6 +24,22 @@
     return null;
   });
 
+  let nextLab = $derived.by(() => {
+    if (!catalog || !current) return null;
+    const { pathEntry, scenario, lab } = current;
+    const labIndex = scenario.labs.findIndex((item) => item.id === lab.id);
+    if (labIndex >= 0 && labIndex + 1 < scenario.labs.length) {
+      return { lab: scenario.labs[labIndex + 1], sameScenario: true };
+    }
+    const scenarioIndex = pathEntry.scenarios.findIndex((item) => item.id === scenario.id);
+    for (let i = scenarioIndex + 1; i < pathEntry.scenarios.length; i++) {
+      if (pathEntry.scenarios[i].labs.length > 0) {
+        return { lab: pathEntry.scenarios[i].labs[0], sameScenario: false };
+      }
+    }
+    return null;
+  });
+
   let briefHtml = $derived(current ? renderMarkdown(current.lab.brief) : "");
   let stepsHtml = $derived(current?.lab.steps ? renderMarkdown(current.lab.steps) : "");
 
@@ -66,6 +82,12 @@
   }
 
   async function start() {
+    if (
+      session &&
+      !window.confirm("Start again? This will wipe any work on the current lab and reset the emulator.")
+    ) {
+      return;
+    }
     await act("Starting the emulator and running terraform init…", async () => {
       const response = await fetch("/api/sessions", {
         method: "POST",
@@ -78,6 +100,7 @@
         throw new Error(body.error || "Could not start the lab");
       }
       session = body;
+      attempt = null;
       tab = "editor";
       await refresh();
     });
@@ -213,14 +236,56 @@
         {#if busy}<p class="busy">{busy}</p>{/if}
         {#if error}<p class="error">{error}</p>{/if}
         {#if attempt}
-          <ul class="checks" role="list">
-            {#each attempt.checks as item (item.id)}
-              <li class={{ pass: item.passed, fail: !item.passed }}>
-                <strong>{item.id}</strong>
-                {#if item.detail}<span>{item.detail}</span>{/if}
-              </li>
-            {/each}
-          </ul>
+          {@const passedCount = attempt.checks.filter((item) => item.passed).length}
+          {@const totalCount = attempt.checks.length}
+          {@const failedCount = totalCount - passedCount}
+          <section class={{ attempt: true, "is-pass": attempt.passed, "is-fail": !attempt.passed }} aria-live="polite">
+            <div class="attempt-banner">
+              <span class="attempt-icon" aria-hidden="true">{attempt.passed ? "✓" : "✕"}</span>
+              <div class="attempt-copy">
+                <p class="attempt-title">
+                  {#if attempt.passed}
+                    All checks passed
+                  {:else}
+                    {failedCount} of {totalCount} {totalCount === 1 ? "check" : "checks"} failed
+                  {/if}
+                </p>
+                <p class="attempt-meta">
+                  {passedCount} of {totalCount} passed
+                  {#if attempt.passed && !nextLab}
+                    · Last lab in this path
+                  {/if}
+                </p>
+              </div>
+            </div>
+            {#if attempt.passed}
+              <div class="attempt-next">
+                {#if nextLab}
+                  <a class="button-link" href={`#/lab/${encodeURIComponent(nextLab.lab.id)}`}>
+                    <span>{nextLab.sameScenario ? "Next lab" : "Next scenario"}: {nextLab.lab.title}</span>
+                    <span aria-hidden="true">→</span>
+                  </a>
+                {/if}
+                <a class={{ "button-link": true, quiet: !!nextLab }} href="#/">
+                  Back to labs
+                </a>
+              </div>
+            {/if}
+            <ul class="checks" role="list">
+              {#each attempt.checks as item (item.id)}
+                <li class={{ pass: item.passed, fail: !item.passed }}>
+                  <div class="check-row">
+                    <span class="check-badge">
+                      <span aria-hidden="true">{item.passed ? "✓" : "✕"}</span>
+                      {item.passed ? "Pass" : "Fail"}
+                    </span>
+                    <strong>{item.id}</strong>
+                  </div>
+                  {#if item.detail}<span class="check-detail">{item.detail}</span>{/if}
+                </li>
+              {/each}
+            </ul>
+          </section>
         {/if}
         <div class="prose">
           {@html briefHtml}
