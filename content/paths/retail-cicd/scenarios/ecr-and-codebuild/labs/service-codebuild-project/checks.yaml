@@ -1,0 +1,18 @@
+checks:
+  - id: codebuild-role-exists
+    argv: ["aws", "iam", "get-role", "--role-name", "retaildemostore-codebuild-role"]
+    expect_exit: 0
+  - id: codebuild-project-ready
+    argv: ["aws", "codebuild", "batch-get-projects", "--names", "retaildemostore-products-build"]
+    expect_exit: 0
+    expect_json_includes:
+      projects:
+        - name: retaildemostore-products-build
+          environment:
+            type: LINUX_CONTAINER
+            computeType: BUILD_GENERAL1_SMALL
+            privilegedMode: true
+          source:
+            type: CODEPIPELINE
+          artifacts:
+            type: CODEPIPELINE

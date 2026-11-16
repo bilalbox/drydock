@@ -1,0 +1,11 @@
+id: carts-and-orders-services
+title: Carts and Orders microservices
+mode: challenge
+clouds: [aws]
+inspector:
+  cloud: aws
+  service: containers
+objective: Add internal NLBs, target groups, listeners, Cloud Map services, Fargate task definitions, and ECS services for carts and orders alongside products.
+brief: brief.md
+starter: starter
+checks: checks.yaml

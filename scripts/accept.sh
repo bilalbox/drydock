@@ -1,6 +1,7 @@
 #!/bin/sh
-# Apply the hidden solution for each Northline lab and require every check to pass.
+# Apply the hidden solution for each lab (optionally filtered by path id) and require every check to pass.
 set -eu
+filter=${1:-}
 cd "$(dirname "$0")/.."
 if ! command -v docker >/dev/null 2>&1; then
   echo "docker is required to run the acceptance test" >&2
@@ -52,11 +53,14 @@ grade_lab() {
   python3 -c 'import json,sys; data=json.loads(sys.argv[1]); assert data["passed"], data' "$result"
 }
 
-root=content/paths/artifact-storage/scenarios/northline/labs
-grade_lab "artifact-storage/northline/private-artifact-bucket" \
-  "$root/private-artifact-bucket/solution/main.tf"
-grade_lab "artifact-storage/northline/expire-old-builds" \
-  "$root/expire-old-builds/solution/main.tf"
-grade_lab "artifact-storage/northline/current-release-gone" \
-  "$root/current-release-gone/solution/main.tf"
+for solution in content/paths/*/scenarios/*/labs/*/solution/main.tf; do
+  lab_dir=${solution%/solution/main.tf}
+  path_id=$(printf '%s' "$lab_dir" | cut -d/ -f3)
+  scenario_id=$(printf '%s' "$lab_dir" | cut -d/ -f5)
+  lab_id=$(printf '%s' "$lab_dir" | cut -d/ -f7)
+  if [ -n "$filter" ] && [ "$path_id" != "$filter" ]; then
+    continue
+  fi
+  grade_lab "${path_id}/${scenario_id}/${lab_id}" "$solution"
+done
 echo "acceptance passed"

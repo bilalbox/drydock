@@ -1,0 +1,21 @@
+checks:
+  - id: http-api-created
+    argv: ["aws", "apigatewayv2", "get-apis"]
+    expect_exit: 0
+    expect_json_includes:
+      Items:
+        - Name: retaildemostore-http-api
+          ProtocolType: HTTP
+  - id: vpc-link-available
+    argv: ["aws", "apigatewayv2", "get-vpc-links"]
+    expect_exit: 0
+    expect_json_includes:
+      Items:
+        - Name: retaildemostore-vpclink
+          VpcLinkStatus: AVAILABLE
+  - id: apigw-log-group-created
+    argv: ["aws", "logs", "describe-log-groups", "--log-group-name-prefix", "/aws/apigateway/retaildemostore"]
+    expect_exit: 0
+    expect_json_includes:
+      logGroups:
+        - logGroupName: /aws/apigateway/retaildemostore

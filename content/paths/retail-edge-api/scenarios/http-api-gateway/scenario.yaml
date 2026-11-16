@@ -1,0 +1,5 @@
+id: http-api-gateway
+title: API Gateway v2 HTTP API and VPC Link
+labs:
+  - http-api-and-vpc-link
+  - service-integrations-and-routes

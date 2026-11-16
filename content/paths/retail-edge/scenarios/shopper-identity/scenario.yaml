@@ -1,0 +1,5 @@
+id: shopper-identity
+title: Cognito shopper authentication
+labs:
+  - cognito-user-pool-and-client
+  - cognito-identity-pool

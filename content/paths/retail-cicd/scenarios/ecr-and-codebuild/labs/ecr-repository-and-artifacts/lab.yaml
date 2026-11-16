@@ -1,0 +1,23 @@
+id: ecr-repository-and-artifacts
+title: ECR repository and pipeline S3 buckets
+mode: guided
+clouds: [aws]
+inspector:
+  cloud: aws
+  service: registry
+objective: Create the retaildemostore/products ECR repository with scan-on-push enabled, along with the private pipeline artifact and versioned source S3 buckets.
+brief: ../../scenario.md
+steps: steps.md
+starter: starter
+checks: checks.yaml
+references:
+  - title: Amazon ECR private repositories
+    url: https://docs.aws.amazon.com/AmazonECR/latest/userguide/Repositories.html
+    why: >-
+      An ECR repository stores versioned Docker images for a microservice and
+      scans pushed images for known vulnerabilities.
+  - title: CodePipeline S3 source actions
+    url: https://docs.aws.amazon.com/codepipeline/latest/userguide/action-reference-S3.html
+    why: >-
+      CodePipeline requires versioning on an S3 source bucket so every uploaded
+      source archive produces a distinct version ID for pipeline runs.

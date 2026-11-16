@@ -1,0 +1,16 @@
+checks:
+  - id: trigger-role-exists
+    argv: ["aws", "iam", "get-role", "--role-name", "retaildemostore-events-pipeline-role"]
+    expect_exit: 0
+  - id: trigger-rule-enabled
+    argv: ["aws", "events", "describe-rule", "--name", "retaildemostore-products-source-trigger"]
+    expect_exit: 0
+    expect_json_includes:
+      Name: retaildemostore-products-source-trigger
+      State: ENABLED
+  - id: trigger-target-configured
+    argv: ["aws", "events", "list-targets-by-rule", "--rule", "retaildemostore-products-source-trigger"]
+    expect_exit: 0
+    expect_json_includes:
+      Targets:
+        - Id: StartProductsPipeline

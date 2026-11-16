@@ -1,0 +1,11 @@
+id: swagger-ui-bucket
+title: Swagger UI asset bucket
+mode: challenge
+clouds: [aws]
+inspector:
+  cloud: aws
+  service: storage
+objective: Add the retaildemostore-swagger-ui S3 bucket with versioning enabled, AES256 default encryption, and all public access blocked while preserving the existing buckets.
+brief: brief.md
+starter: starter
+checks: checks.yaml

@@ -1,0 +1,11 @@
+id: order-events-to-sqs
+title: Route order events to SQS with DLQ
+mode: challenge
+clouds: [aws]
+inspector:
+  cloud: aws
+  service: messaging
+objective: Create the retaildemostore-orders-events SQS queue with a dead-letter queue (retaildemostore-orders-events-dlq, maxReceiveCount 5) and route retaildemostore.orders EventBridge events from retaildemostore-bus to it.
+brief: brief.md
+starter: starter
+checks: checks.yaml

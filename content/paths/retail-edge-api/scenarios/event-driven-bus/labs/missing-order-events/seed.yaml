@@ -1,0 +1,13 @@
+apply: true
+mutate:
+  - - aws
+    - events
+    - put-rule
+    - --name
+    - retaildemostore-orders-to-sqs
+    - --event-bus-name
+    - retaildemostore-bus
+    - --state
+    - DISABLED
+    - --event-pattern
+    - '{"source":["retaildemostore.wrong"]}'

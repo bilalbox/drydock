@@ -1,0 +1,23 @@
+id: products-and-categories-tables
+title: Products and Categories tables
+mode: guided
+clouds: [aws]
+inspector:
+  cloud: aws
+  service: nosql
+objective: Create the retaildemostore-products and retaildemostore-categories DynamoDB tables with PAY_PER_REQUEST billing and their Global Secondary Indexes.
+brief: ../../scenario.md
+steps: steps.md
+starter: starter
+checks: checks.yaml
+references:
+  - title: Core components of Amazon DynamoDB
+    url: https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/HowItWorks.CoreComponents.html
+    why: >-
+      Each catalog table uses a single string partition key named id and
+      on-demand capacity (PAY_PER_REQUEST) to absorb storefront traffic spikes.
+  - title: Using Global Secondary Indexes in DynamoDB
+    url: https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/GSI.html
+    why: >-
+      Global Secondary Indexes let the products and categories services query
+      by category, featured flag, or category name without full table scans.

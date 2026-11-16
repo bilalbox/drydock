@@ -1,0 +1,9 @@
+apply: true
+mutate:
+  - - aws
+    - s3api
+    - put-bucket-versioning
+    - --bucket
+    - retaildemostore-pipeline-source
+    - --versioning-configuration
+    - Status=Suspended

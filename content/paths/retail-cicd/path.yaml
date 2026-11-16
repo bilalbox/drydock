@@ -1,0 +1,6 @@
+id: retail-cicd
+title: Retail Demo Store CI/CD
+summary: Store microservice images in ECR, build with CodeBuild, and trigger S3-sourced CodePipeline builds via EventBridge.
+scenarios:
+  - ecr-and-codebuild
+  - codepipeline-delivery

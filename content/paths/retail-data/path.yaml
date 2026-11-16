@@ -1,0 +1,7 @@
+id: retail-data
+title: Retail Demo Store data & search
+summary: Provision DynamoDB catalog/order tables, a VPC-isolated managed OpenSearch domain, SSM parameters, and checkout secrets.
+scenarios:
+  - catalog-tables
+  - product-search
+  - service-config-ssm

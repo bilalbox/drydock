@@ -1,0 +1,11 @@
+id: web-ui-distribution
+title: CloudFront Web UI distribution
+mode: challenge
+clouds: [aws]
+inspector:
+  cloud: aws
+  service: cdn
+objective: Deploy an enabled CloudFront distribution for retaildemostore-web-ui using the Origin Access Control, cache policy, and origin request policy, and grant CloudFront read access via bucket policy.
+brief: brief.md
+starter: starter
+checks: checks.yaml

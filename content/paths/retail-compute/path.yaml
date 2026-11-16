@@ -1,0 +1,7 @@
+id: retail-compute
+title: Retail Demo Store microservices & ELBv2
+summary: Run Fargate microservices in an ECS cluster behind internal Network Load Balancers with Cloud Map private DNS discovery.
+scenarios:
+  - ecs-foundation
+  - service-load-balancing
+  - ecs-microservices

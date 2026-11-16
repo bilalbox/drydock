@@ -1,0 +1,19 @@
+checks:
+  - id: identity-pool-created
+    argv: ["aws", "cognito-identity", "list-identity-pools", "--max-results", "10"]
+    expect_exit: 0
+    expect_json_includes:
+      IdentityPools:
+        - IdentityPoolName: retaildemostore_identity_pool
+  - id: authenticated-role-exists
+    argv: ["aws", "iam", "get-role", "--role-name", "retaildemostore-cognito-auth"]
+    expect_exit: 0
+    expect_json_includes:
+      Role:
+        RoleName: retaildemostore-cognito-auth
+  - id: unauthenticated-role-exists
+    argv: ["aws", "iam", "get-role", "--role-name", "retaildemostore-cognito-unauth"]
+    expect_exit: 0
+    expect_json_includes:
+      Role:
+        RoleName: retaildemostore-cognito-unauth

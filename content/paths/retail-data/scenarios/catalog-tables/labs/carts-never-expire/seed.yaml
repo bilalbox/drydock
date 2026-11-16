@@ -1,0 +1,9 @@
+apply: true
+mutate:
+  - - aws
+    - dynamodb
+    - update-time-to-live
+    - --table-name
+    - retaildemostore-carts
+    - --time-to-live-specification
+    - Enabled=true,AttributeName=expires_at

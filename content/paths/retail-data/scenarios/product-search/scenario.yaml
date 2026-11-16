@@ -1,0 +1,5 @@
+id: product-search
+title: Product search security and indexing stream
+labs:
+  - search-security-and-kms
+  - search-role-and-index-stream

@@ -1,0 +1,40 @@
+checks:
+  - id: logging-bucket-versioned
+    argv: ["aws", "s3api", "get-bucket-versioning", "--bucket", "retaildemostore-logging"]
+    expect_exit: 0
+    expect_json:
+      Status: Enabled
+  - id: logging-bucket-encrypted
+    argv: ["aws", "s3api", "get-bucket-encryption", "--bucket", "retaildemostore-logging"]
+    expect_exit: 0
+    expect_json_includes:
+      ServerSideEncryptionConfiguration:
+        Rules:
+          - ApplyServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+  - id: logging-bucket-private
+    argv: ["aws", "s3api", "get-public-access-block", "--bucket", "retaildemostore-logging"]
+    expect_exit: 0
+    expect_json:
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        IgnorePublicAcls: true
+        BlockPublicPolicy: true
+        RestrictPublicBuckets: true
+  - id: web-ui-bucket-encrypted
+    argv: ["aws", "s3api", "get-bucket-encryption", "--bucket", "retaildemostore-web-ui"]
+    expect_exit: 0
+    expect_json_includes:
+      ServerSideEncryptionConfiguration:
+        Rules:
+          - ApplyServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+  - id: web-ui-bucket-private
+    argv: ["aws", "s3api", "get-public-access-block", "--bucket", "retaildemostore-web-ui"]
+    expect_exit: 0
+    expect_json:
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        IgnorePublicAcls: true
+        BlockPublicPolicy: true
+        RestrictPublicBuckets: true

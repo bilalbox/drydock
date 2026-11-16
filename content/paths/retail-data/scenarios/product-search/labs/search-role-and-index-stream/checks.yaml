@@ -1,0 +1,16 @@
+checks:
+  - id: kinesis-stream-active
+    argv: ["aws", "kinesis", "describe-stream-summary", "--stream-name", "retaildemostore-catalog-index"]
+    expect_exit: 0
+    expect_json_includes:
+      StreamDescriptionSummary:
+        StreamName: retaildemostore-catalog-index
+        StreamStatus: ACTIVE
+        OpenShardCount: 1
+        RetentionPeriodHours: 24
+  - id: search-role-exists
+    argv: ["aws", "iam", "get-role", "--role-name", "retaildemostore-search-service"]
+    expect_exit: 0
+    expect_json_includes:
+      Role:
+        RoleName: retaildemostore-search-service

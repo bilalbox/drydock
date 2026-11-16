@@ -1,0 +1,23 @@
+id: logging-and-asset-buckets
+title: Logging and Web UI buckets
+mode: guided
+clouds: [aws]
+inspector:
+  cloud: aws
+  service: storage
+objective: Create the retaildemostore-logging and retaildemostore-web-ui S3 buckets with AES256 encryption and all public access blocked, and enable versioning on retaildemostore-logging.
+brief: ../../scenario.md
+steps: steps.md
+starter: starter
+checks: checks.yaml
+references:
+  - title: Protecting data with server-side encryption (SSE-S3)
+    url: https://docs.aws.amazon.com/AmazonS3/latest/userguide/UsingServerSideEncryption.html
+    why: >-
+      Server-side encryption with S3-managed keys (AES256) ensures objects written
+      to the storefront and logging buckets are encrypted at rest by default.
+  - title: Blocking public access to your Amazon S3 storage
+    url: https://docs.aws.amazon.com/AmazonS3/latest/userguide/access-control-block-public-access.html
+    why: >-
+      Blocking public access keeps private web origin buckets unreachable directly
+      from S3, so CloudFront OAC remains the only read path.

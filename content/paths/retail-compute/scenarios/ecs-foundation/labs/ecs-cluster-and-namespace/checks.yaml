@@ -1,0 +1,21 @@
+checks:
+  - id: ecs-cluster-active
+    argv: ["aws", "ecs", "describe-clusters", "--clusters", "retaildemostore"]
+    expect_exit: 0
+    expect_json_includes:
+      clusters:
+        - clusterName: retaildemostore
+          status: ACTIVE
+  - id: cloudmap-namespace-created
+    argv: ["aws", "servicediscovery", "list-namespaces"]
+    expect_exit: 0
+    expect_json_includes:
+      Namespaces:
+        - Name: retaildemostore.local
+          Type: DNS_PRIVATE
+  - id: ecs-log-group-created
+    argv: ["aws", "logs", "describe-log-groups", "--log-group-name-prefix", "/ecs/retaildemostore"]
+    expect_exit: 0
+    expect_json_includes:
+      logGroups:
+        - logGroupName: /ecs/retaildemostore

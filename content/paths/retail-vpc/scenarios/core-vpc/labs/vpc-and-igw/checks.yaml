@@ -1,0 +1,15 @@
+checks:
+  - id: vpc-exists
+    argv: ["aws", "ec2", "describe-vpcs", "--filters", "Name=tag:Name,Values=retaildemostore-vpc"]
+    expect_exit: 0
+    expect_json_includes:
+      Vpcs:
+        - CidrBlock: "10.0.0.0/16"
+          State: available
+  - id: igw-attached
+    argv: ["aws", "ec2", "describe-internet-gateways", "--filters", "Name=tag:Name,Values=retaildemostore-igw"]
+    expect_exit: 0
+    expect_json_includes:
+      InternetGateways:
+        - Attachments:
+            - State: available

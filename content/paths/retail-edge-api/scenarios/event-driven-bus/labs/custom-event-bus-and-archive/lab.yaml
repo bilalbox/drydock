@@ -1,0 +1,23 @@
+id: custom-event-bus-and-archive
+title: Custom EventBridge bus and archive
+mode: guided
+clouds: [aws]
+inspector:
+  cloud: aws
+  service: events
+objective: Create the retaildemostore-bus custom EventBridge bus, 120-day archive retaildemostore-arch, disabled catch-all CloudWatch Logs rule, and RetailDemoStore-eventbus SSM parameter.
+brief: ../../scenario.md
+steps: steps.md
+starter: starter
+checks: checks.yaml
+references:
+  - title: Amazon EventBridge event buses
+    url: https://docs.aws.amazon.com/eventbridge/latest/userguide/eb-event-bus.html
+    why: >-
+      A dedicated custom event bus isolates application domain events from AWS
+      service events on the default bus.
+  - title: Amazon EventBridge event archives
+    url: https://docs.aws.amazon.com/eventbridge/latest/userguide/eb-archive-replay.html
+    why: >-
+      Archiving events for 120 days lets downstream consumers replay past
+      order or cart events after outages or schema additions.

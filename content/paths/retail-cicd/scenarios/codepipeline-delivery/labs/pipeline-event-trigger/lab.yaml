@@ -1,0 +1,11 @@
+id: pipeline-event-trigger
+title: EventBridge trigger for CodePipeline
+mode: challenge
+clouds: [aws]
+inspector:
+  cloud: aws
+  service: events
+objective: Create an EventBridge rule (retaildemostore-products-source-trigger) watching S3 uploads to retaildemostore-pipeline-source/products-source.zip and triggering retaildemostore-products-pipeline with an IAM role.
+brief: brief.md
+starter: starter
+checks: checks.yaml

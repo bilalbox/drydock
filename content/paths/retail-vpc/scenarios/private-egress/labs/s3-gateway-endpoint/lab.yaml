@@ -1,0 +1,11 @@
+id: s3-gateway-endpoint
+title: S3 gateway endpoint
+mode: challenge
+clouds: [aws]
+inspector:
+  cloud: aws
+  service: networking
+objective: Create an S3 Gateway VPC endpoint in retaildemostore-vpc attached to both private route tables so private workloads reach S3 without traversing the NAT Gateways.
+brief: brief.md
+starter: starter
+checks: checks.yaml

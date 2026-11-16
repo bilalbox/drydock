@@ -1,0 +1,16 @@
+checks:
+  - id: orders-rule-enabled
+    argv: ["aws", "events", "describe-rule", "--name", "retaildemostore-orders-to-sqs", "--event-bus-name", "retaildemostore-bus"]
+    expect_exit: 0
+    expect_json_includes:
+      Name: retaildemostore-orders-to-sqs
+      State: ENABLED
+  - id: orders-rule-targets-sqs
+    argv: ["aws", "events", "list-targets-by-rule", "--rule", "retaildemostore-orders-to-sqs", "--event-bus-name", "retaildemostore-bus"]
+    expect_exit: 0
+    expect_json_includes:
+      Targets:
+        - Id: OrdersEventsSqs
+  - id: orders-queue-preserved
+    argv: ["aws", "sqs", "get-queue-url", "--queue-name", "retaildemostore-orders-events"]
+    expect_exit: 0

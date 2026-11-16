@@ -1,0 +1,28 @@
+id: vpc-and-igw
+title: VPC and Internet Gateway
+mode: guided
+clouds: [aws]
+inspector:
+  cloud: aws
+  service: networking
+objective: Create the retaildemostore-vpc VPC (10.0.0.0/16) with DNS support and DNS hostnames enabled, and attach the retaildemostore-igw Internet Gateway.
+brief: ../../scenario.md
+steps: steps.md
+starter: starter
+checks: checks.yaml
+references:
+  - title: What is Amazon VPC?
+    url: https://docs.aws.amazon.com/vpc/latest/userguide/what-is-amazon-vpc.html
+    why: >-
+      A VPC gives the store its own private IP address space (10.0.0.0/16) and
+      isolates its subnets and routing tables from the default VPC.
+  - title: DNS attributes in your VPC
+    url: https://docs.aws.amazon.com/vpc/latest/userguide/vpc-dns.html#vpc-dns-support
+    why: >-
+      Enabling both DNS support and DNS hostnames lets internal services resolve
+      Cloud Map private DNS names and endpoint hostnames inside the VPC.
+  - title: Connect to the internet using an internet gateway
+    url: https://docs.aws.amazon.com/vpc/latest/userguide/VPC_Internet_Gateway.html
+    why: >-
+      An Internet Gateway provides a target in route tables for internet-routable
+      traffic from public subnets.

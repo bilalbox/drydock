@@ -1,0 +1,12 @@
+id: source-bucket-no-versioning
+title: Pipeline source bucket overwrites releases
+mode: issue
+clouds: [aws]
+inspector:
+  cloud: aws
+  service: storage
+objective: Re-enable versioning on retaildemostore-pipeline-source while keeping public access blocked and retaildemostore/products ECR repository intact.
+brief: brief.md
+starter: starter
+checks: checks.yaml
+seed: seed.yaml

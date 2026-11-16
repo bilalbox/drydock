@@ -1,0 +1,14 @@
+checks:
+  - id: cloudmap-service-created
+    argv: ["aws", "servicediscovery", "list-services"]
+    expect_exit: 0
+    expect_json_includes:
+      Services:
+        - Name: products
+  - id: ssm-lb-param-created
+    argv: ["aws", "ssm", "get-parameter", "--name", "/retaildemostore/services_load_balancers/products"]
+    expect_exit: 0
+    expect_json_includes:
+      Parameter:
+        Name: /retaildemostore/services_load_balancers/products
+        Type: String

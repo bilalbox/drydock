@@ -1,0 +1,20 @@
+checks:
+  - id: nlb-active
+    argv: ["aws", "elbv2", "describe-load-balancers", "--names", "retaildemostore-products-nlb"]
+    expect_exit: 0
+    expect_json_includes:
+      LoadBalancers:
+        - LoadBalancerName: retaildemostore-products-nlb
+          Scheme: internal
+          Type: network
+  - id: target-group-ready
+    argv: ["aws", "elbv2", "describe-target-groups", "--names", "retaildemostore-products-tg"]
+    expect_exit: 0
+    expect_json_includes:
+      TargetGroups:
+        - TargetGroupName: retaildemostore-products-tg
+          Port: 80
+          Protocol: TCP
+          TargetType: ip
+          HealthCheckProtocol: HTTP
+          HealthCheckPath: /

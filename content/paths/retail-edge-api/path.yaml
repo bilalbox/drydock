@@ -1,0 +1,7 @@
+id: retail-edge-api
+title: Retail Demo Store APIs & events
+summary: Expose microservices behind an API Gateway v2 HTTP API with VPC Link, route events on EventBridge to SQS, and run checkout Lambda functions.
+scenarios:
+  - http-api-gateway
+  - event-driven-bus
+  - checkout-lambda

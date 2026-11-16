@@ -1,0 +1,12 @@
+id: missing-order-events
+title: Order events missing from SQS queue
+mode: issue
+clouds: [aws]
+inspector:
+  cloud: aws
+  service: events
+objective: Restore active EventBridge routing from retaildemostore-bus matching source retaildemostore.orders to retaildemostore-orders-events while keeping the queue and DLQ intact.
+brief: brief.md
+starter: starter
+checks: checks.yaml
+seed: seed.yaml

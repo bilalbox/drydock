@@ -1,0 +1,6 @@
+id: ecs-microservices
+title: Fargate microservices with NLB and Cloud Map
+labs:
+  - products-ecs-service
+  - carts-and-orders-services
+  - products-task-network-error

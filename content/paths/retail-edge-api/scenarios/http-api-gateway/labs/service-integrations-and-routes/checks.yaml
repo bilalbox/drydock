@@ -1,0 +1,20 @@
+checks:
+  - id: unauth-invoke-policy-attached
+    argv: ["aws", "iam", "list-role-policies", "--role-name", "retaildemostore-cognito-unauth"]
+    expect_exit: 0
+    expect_json_includes:
+      PolicyNames:
+        - retaildemostore-unauth-api-access
+  - id: auth-invoke-policy-attached
+    argv: ["aws", "iam", "list-role-policies", "--role-name", "retaildemostore-cognito-auth"]
+    expect_exit: 0
+    expect_json_includes:
+      PolicyNames:
+        - retaildemostore-auth-api-access
+  - id: http-api-preserved
+    argv: ["aws", "apigatewayv2", "get-apis"]
+    expect_exit: 0
+    expect_json_includes:
+      Items:
+        - Name: retaildemostore-http-api
+          ProtocolType: HTTP

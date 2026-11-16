@@ -1,0 +1,26 @@
+checks:
+  - id: carts-table-ready
+    argv: ["aws", "dynamodb", "describe-table", "--table-name", "retaildemostore-carts"]
+    expect_exit: 0
+    expect_json_includes:
+      Table:
+        TableName: retaildemostore-carts
+        TableStatus: ACTIVE
+        GlobalSecondaryIndexes:
+          - IndexName: username-index
+  - id: carts-ttl-enabled
+    argv: ["aws", "dynamodb", "describe-time-to-live", "--table-name", "retaildemostore-carts"]
+    expect_exit: 0
+    expect_json:
+      TimeToLiveDescription:
+        TimeToLiveStatus: ENABLED
+        AttributeName: ttl
+  - id: orders-table-ready
+    argv: ["aws", "dynamodb", "describe-table", "--table-name", "retaildemostore-orders"]
+    expect_exit: 0
+    expect_json_includes:
+      Table:
+        TableName: retaildemostore-orders
+        TableStatus: ACTIVE
+        GlobalSecondaryIndexes:
+          - IndexName: username-index

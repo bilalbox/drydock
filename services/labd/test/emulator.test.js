@@ -127,7 +127,7 @@ test("ensureClouds pulls, creates, starts, and health-checks on-demand emulators
   await manager.ensureClouds(["aws", "azure", "gcp"]);
 
   assert.equal(fake.selfInspects, 1);
-  assert.deepEqual(fake.pulled, ["floci/floci:2.4.0", "floci/floci-az:0.16.0", "floci/floci-gcp:0.12.0"]);
+  assert.deepEqual(fake.pulled, ["floci/floci:2.5.0", "floci/floci-az:0.16.0", "floci/floci-gcp:0.12.0"]);
   assert.deepEqual(fake.started, ["drydock-floci", "drydock-floci-az", "drydock-floci-gcp"]);
 
   const awsOpts = fake.created.find((item) => item.name === "drydock-floci");

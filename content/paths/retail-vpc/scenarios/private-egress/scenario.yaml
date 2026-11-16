@@ -1,0 +1,5 @@
+id: private-egress
+title: Private subnet egress and S3 VPC endpoint
+labs:
+  - nat-gateways-and-routes
+  - s3-gateway-endpoint

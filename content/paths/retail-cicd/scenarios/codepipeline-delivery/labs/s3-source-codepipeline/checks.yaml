@@ -1,0 +1,13 @@
+checks:
+  - id: codepipeline-created
+    argv: ["aws", "codepipeline", "get-pipeline", "--name", "retaildemostore-products-pipeline"]
+    expect_exit: 0
+    expect_json_includes:
+      pipeline:
+        name: retaildemostore-products-pipeline
+        stages:
+          - name: Source
+          - name: Build
+  - id: codepipeline-role-exists
+    argv: ["aws", "iam", "get-role", "--role-name", "retaildemostore-codepipeline-role"]
+    expect_exit: 0

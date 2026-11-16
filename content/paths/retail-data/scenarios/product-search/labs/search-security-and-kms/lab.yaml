@@ -1,0 +1,23 @@
+id: search-security-and-kms
+title: Search VPC security group and KMS key
+mode: guided
+clouds: [aws]
+inspector:
+  cloud: aws
+  service: kms
+objective: Create the retaildemostore-opensearch-sg security group allowing TCP 443 from 10.0.0.0/16 and a KMS key with alias/retaildemostore-search for search encryption at rest.
+brief: ../../scenario.md
+steps: steps.md
+starter: starter
+checks: checks.yaml
+references:
+  - title: Encryption of data at rest for Amazon OpenSearch Service
+    url: https://docs.aws.amazon.com/opensearch-service/latest/developerguide/encryption-at-rest.html
+    why: >-
+      A customer-managed KMS key encrypts indexed catalog data at rest and
+      lets you control key rotation and IAM permissions independently.
+  - title: Controlling network access with security groups
+    url: https://docs.aws.amazon.com/vpc/latest/userguide/vpc-security-groups.html
+    why: >-
+      Restricting port 443 ingress to the VPC CIDR keeps the search endpoint
+      unreachable from outside the Retail Demo Store network.

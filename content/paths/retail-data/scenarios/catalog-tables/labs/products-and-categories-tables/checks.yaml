@@ -1,0 +1,20 @@
+checks:
+  - id: products-table-ready
+    argv: ["aws", "dynamodb", "describe-table", "--table-name", "retaildemostore-products"]
+    expect_exit: 0
+    expect_json_includes:
+      Table:
+        TableName: retaildemostore-products
+        TableStatus: ACTIVE
+        GlobalSecondaryIndexes:
+          - IndexName: category-index
+          - IndexName: featured-index
+  - id: categories-table-ready
+    argv: ["aws", "dynamodb", "describe-table", "--table-name", "retaildemostore-categories"]
+    expect_exit: 0
+    expect_json_includes:
+      Table:
+        TableName: retaildemostore-categories
+        TableStatus: ACTIVE
+        GlobalSecondaryIndexes:
+          - IndexName: name-index

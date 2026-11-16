@@ -1,0 +1,6 @@
+id: catalog-tables
+title: DynamoDB catalog, carts, and orders tables
+labs:
+  - products-and-categories-tables
+  - carts-and-orders-tables
+  - carts-never-expire

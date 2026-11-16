@@ -1,0 +1,23 @@
+id: nat-gateways-and-routes
+title: NAT Gateways and private routes
+mode: guided
+clouds: [aws]
+inspector:
+  cloud: aws
+  service: networking
+objective: Create an Elastic IP and NAT Gateway in each public subnet and route each private subnet's 0.0.0.0/0 traffic through the NAT Gateway in its Availability Zone.
+brief: ../../scenario.md
+steps: steps.md
+starter: starter
+checks: checks.yaml
+references:
+  - title: NAT gateways
+    url: https://docs.aws.amazon.com/vpc/latest/userguide/vpc-nat-gateway.html
+    why: >-
+      A NAT Gateway in a public subnet translates private subnet outbound
+      requests to a public Elastic IP while blocking unsolicited inbound traffic.
+  - title: High availability for NAT gateways
+    url: https://docs.aws.amazon.com/vpc/latest/userguide/vpc-nat-gateway.html#nat-gateway-basics
+    why: >-
+      Deploying one NAT Gateway per Availability Zone avoids cross-AZ data
+      transfer and keeps each private subnet isolated from single-AZ failure.

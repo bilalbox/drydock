@@ -1,0 +1,35 @@
+checks:
+  - id: nat-gateways-available
+    argv: ["aws", "ec2", "describe-nat-gateways", "--filter", "Name=tag:Name,Values=retaildemostore-nat-1,retaildemostore-nat-2"]
+    expect_exit: 0
+    expect_json_includes:
+      NatGateways:
+        - State: available
+          Tags:
+            - Key: Name
+              Value: retaildemostore-nat-1
+        - State: available
+          Tags:
+            - Key: Name
+              Value: retaildemostore-nat-2
+  - id: private-route-tables-ready
+    argv: ["aws", "ec2", "describe-route-tables", "--filters", "Name=tag:Name,Values=retaildemostore-private-rt-1,retaildemostore-private-rt-2"]
+    expect_exit: 0
+    expect_json_includes:
+      RouteTables:
+        - Tags:
+            - Key: Name
+              Value: retaildemostore-private-rt-1
+          Routes:
+            - DestinationCidrBlock: "0.0.0.0/0"
+              State: active
+          Associations:
+            - Main: false
+        - Tags:
+            - Key: Name
+              Value: retaildemostore-private-rt-2
+          Routes:
+            - DestinationCidrBlock: "0.0.0.0/0"
+              State: active
+          Associations:
+            - Main: false

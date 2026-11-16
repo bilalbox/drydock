@@ -1,0 +1,17 @@
+checks:
+  - id: payment-secret-exists
+    argv: ["aws", "secretsmanager", "describe-secret", "--secret-id", "retaildemostore/payment-signing-key"]
+    expect_exit: 0
+    expect_json_includes:
+      Name: retaildemostore/payment-signing-key
+  - id: payment-secret-has-value
+    argv: ["aws", "secretsmanager", "get-secret-value", "--secret-id", "retaildemostore/payment-signing-key"]
+    expect_exit: 0
+    expect_json_includes:
+      Name: retaildemostore/payment-signing-key
+  - id: read-policy-exists
+    argv: ["aws", "iam", "list-policies", "--scope", "Local"]
+    expect_exit: 0
+    expect_json_includes:
+      Policies:
+        - PolicyName: retaildemostore-read-payment-secret

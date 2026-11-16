@@ -1,0 +1,11 @@
+id: products-task-network-error
+title: Products ECS service fails to deploy
+mode: issue
+clouds: [aws]
+inspector:
+  cloud: aws
+  service: containers
+objective: Fix the deployment failure so the retaildemostore-products Fargate task definition and products ECS service (desired count 1) are active behind the NLB target group and Cloud Map service.
+brief: brief.md
+starter: starter
+checks: checks.yaml

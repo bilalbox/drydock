@@ -1,0 +1,28 @@
+checks:
+  - id: nlbs-active
+    argv: ["aws", "elbv2", "describe-load-balancers", "--names", "retaildemostore-products-nlb", "retaildemostore-carts-nlb", "retaildemostore-orders-nlb"]
+    expect_exit: 0
+    expect_json_includes:
+      LoadBalancers:
+        - LoadBalancerName: retaildemostore-products-nlb
+        - LoadBalancerName: retaildemostore-carts-nlb
+        - LoadBalancerName: retaildemostore-orders-nlb
+  - id: ecs-services-active
+    argv: ["aws", "ecs", "describe-services", "--cluster", "retaildemostore", "--services", "products", "carts", "orders"]
+    expect_exit: 0
+    expect_json_includes:
+      services:
+        - serviceName: products
+          status: ACTIVE
+        - serviceName: carts
+          status: ACTIVE
+        - serviceName: orders
+          status: ACTIVE
+  - id: cloudmap-services-registered
+    argv: ["aws", "servicediscovery", "list-services"]
+    expect_exit: 0
+    expect_json_includes:
+      Services:
+        - Name: products
+        - Name: carts
+        - Name: orders

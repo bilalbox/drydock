@@ -1,0 +1,11 @@
+id: service-integrations-and-routes
+title: Service integrations, routes, and IAM invoke policies
+mode: challenge
+clouds: [aws]
+inspector:
+  cloud: aws
+  service: apigateway
+objective: Wire VPC Link HTTP_PROXY integrations to the products and orders NLB listeners, add AWS_IAM routes for products, categories, and orders, and attach execute-api:Invoke policies to the Cognito roles.
+brief: brief.md
+starter: starter
+checks: checks.yaml

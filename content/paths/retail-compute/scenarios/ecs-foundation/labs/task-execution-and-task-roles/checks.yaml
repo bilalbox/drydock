@@ -1,0 +1,20 @@
+checks:
+  - id: execution-role-exists
+    argv: ["aws", "iam", "get-role", "--role-name", "retaildemostore-ecs-execution-role"]
+    expect_exit: 0
+    expect_json_includes:
+      Role:
+        RoleName: retaildemostore-ecs-execution-role
+  - id: products-task-role-exists
+    argv: ["aws", "iam", "get-role", "--role-name", "retaildemostore-products-task-role"]
+    expect_exit: 0
+    expect_json_includes:
+      Role:
+        RoleName: retaildemostore-products-task-role
+  - id: ecs-cluster-preserved
+    argv: ["aws", "ecs", "describe-clusters", "--clusters", "retaildemostore"]
+    expect_exit: 0
+    expect_json_includes:
+      clusters:
+        - clusterName: retaildemostore
+          status: ACTIVE

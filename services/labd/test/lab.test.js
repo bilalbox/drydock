@@ -254,3 +254,86 @@ test("session grading accepts retained noncurrent builds and rejects expiring th
   assert.equal(expiredCurrent.passed, false);
   assert.equal(expiredCurrent.checks.find((check) => check.id === "old-versions-expire").passed, false);
 });
+
+const VALID_INSPECTOR_SERVICES = new Set([
+  "compute",
+  "k8s",
+  "serverless",
+  "containers",
+  "registry",
+  "sagemaker",
+  "storage",
+  "table",
+  "database",
+  "dsql",
+  "cache",
+  "nosql",
+  "search",
+  "analytics",
+  "networking",
+  "workflows",
+  "loadbalancing",
+  "cdn",
+  "dns",
+  "messaging",
+  "sns",
+  "queue",
+  "streams",
+  "events",
+  "eventsv2",
+  "identity",
+  "cognito",
+  "apigateway",
+  "email",
+  "kms",
+  "certificates",
+  "parameters",
+  "secrets",
+  "iac",
+  "configuration",
+  "cicd",
+  "scheduler",
+  "logs",
+  "cloudwatch",
+  "xray",
+  "workrequests",
+]);
+
+test("all catalog labs follow mode, inspector, and starter/solution conventions", () => {
+  const catalog = loadCatalog(path.join(root, "content"));
+  assert.ok(catalog.paths.length >= 7);
+
+  for (const pathEntry of catalog.paths) {
+    for (const scenario of pathEntry.scenarios) {
+      assert.ok(scenario.labs.length > 0, `${pathEntry.id}/${scenario.id} must have labs`);
+      for (const lab of scenario.labs) {
+        assert.ok(
+          VALID_INSPECTOR_SERVICES.has(lab.inspector?.service),
+          `${lab.id} uses unknown inspector.service=${lab.inspector?.service}`,
+        );
+        assert.ok(lab.checks.length > 0, `${lab.id} must have at least one check`);
+        assert.ok(lab.brief.trim().length > 0, `${lab.id} must have a brief`);
+
+        const starterTf = fs.readFileSync(path.join(lab.starterDir, "main.tf"), "utf8");
+        const solutionTf = fs.readFileSync(path.join(lab.dir, "solution", "main.tf"), "utf8");
+        assert.notEqual(starterTf, solutionTf, `${lab.id} starter and solution main.tf must differ`);
+
+        if (lab.mode === "guided") {
+          assert.ok(lab.steps.trim().length > 0, `${lab.id} guided lab needs steps.md`);
+          assert.ok(lab.references.length > 0, `${lab.id} guided lab needs references`);
+        } else if (lab.mode === "challenge") {
+          assert.equal(lab.steps, "", `${lab.id} challenge lab must not have steps`);
+          assert.deepEqual(lab.references, [], `${lab.id} challenge lab must not have references`);
+          assert.equal(lab.seed, null, `${lab.id} challenge lab must not have seed`);
+          assert.doesNotMatch(lab.brief, /main\.tf|aws_[a-z0-9_]+/, `${lab.id} challenge brief leaks Terraform`);
+          assert.doesNotMatch(lab.objective, /main\.tf|aws_[a-z0-9_]+/, `${lab.id} challenge objective leaks Terraform`);
+        } else if (lab.mode === "issue") {
+          assert.equal(lab.steps, "", `${lab.id} issue lab must not have steps`);
+          assert.deepEqual(lab.references, [], `${lab.id} issue lab must not have references`);
+        } else {
+          assert.fail(`${lab.id} has invalid mode ${lab.mode}`);
+        }
+      }
+    }
+  }
+});

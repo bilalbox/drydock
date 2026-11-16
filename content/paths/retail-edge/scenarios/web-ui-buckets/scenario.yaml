@@ -1,0 +1,6 @@
+id: web-ui-buckets
+title: Private web and API spec buckets
+labs:
+  - logging-and-asset-buckets
+  - swagger-ui-bucket
+  - web-ui-public-exposure

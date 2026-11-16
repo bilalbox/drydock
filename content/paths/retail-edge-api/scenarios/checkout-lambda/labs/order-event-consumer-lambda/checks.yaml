@@ -1,0 +1,15 @@
+checks:
+  - id: order-consumer-lambda-created
+    argv: ["aws", "lambda", "get-function", "--function-name", "retaildemostore-order-consumer"]
+    expect_exit: 0
+    expect_json_includes:
+      Configuration:
+        FunctionName: retaildemostore-order-consumer
+        Runtime: python3.12
+  - id: sqs-event-source-mapping-enabled
+    argv: ["aws", "lambda", "list-event-source-mappings", "--function-name", "retaildemostore-order-consumer"]
+    expect_exit: 0
+    expect_json_includes:
+      EventSourceMappings:
+        - BatchSize: 10
+          State: Enabled

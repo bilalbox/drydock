@@ -1,0 +1,11 @@
+id: carts-and-orders-tables
+title: Carts and Orders tables with TTL
+mode: challenge
+clouds: [aws]
+inspector:
+  cloud: aws
+  service: nosql
+objective: Add the retaildemostore-carts and retaildemostore-orders DynamoDB tables with username-index GSIs and enable TTL on retaildemostore-carts.
+brief: brief.md
+starter: starter
+checks: checks.yaml

@@ -1,0 +1,23 @@
+id: ecs-cluster-and-namespace
+title: ECS cluster and Cloud Map namespace
+mode: guided
+clouds: [aws]
+inspector:
+  cloud: aws
+  service: containers
+objective: Create the retaildemostore ECS cluster, the retaildemostore.local Cloud Map private DNS namespace in the VPC, and the /ecs/retaildemostore CloudWatch Log Group.
+brief: ../../scenario.md
+steps: steps.md
+starter: starter
+checks: checks.yaml
+references:
+  - title: Amazon ECS clusters
+    url: https://docs.aws.amazon.com/AmazonECS/latest/developerguide/clusters.html
+    why: >-
+      A single ECS cluster logically groups all storefront microservices and
+      provides the scheduling boundary for Fargate tasks.
+  - title: Private DNS namespaces in AWS Cloud Map
+    url: https://docs.aws.amazon.com/cloud-map/latest/dg/working-with-namespaces.html
+    why: >-
+      A Cloud Map private DNS namespace lets services call each other using
+      internal names such as products.retaildemostore.local inside the VPC.

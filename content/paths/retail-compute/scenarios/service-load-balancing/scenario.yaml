@@ -1,0 +1,5 @@
+id: service-load-balancing
+title: Internal Network Load Balancer and service discovery
+labs:
+  - internal-nlb-and-target-group
+  - service-discovery-and-ssm-endpoint

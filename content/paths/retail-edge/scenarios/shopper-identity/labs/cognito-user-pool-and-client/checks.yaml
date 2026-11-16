@@ -1,0 +1,7 @@
+checks:
+  - id: user-pool-created
+    argv: ["aws", "cognito-idp", "list-user-pools", "--max-results", "10"]
+    expect_exit: 0
+    expect_json_includes:
+      UserPools:
+        - Name: retaildemostore-user-pool

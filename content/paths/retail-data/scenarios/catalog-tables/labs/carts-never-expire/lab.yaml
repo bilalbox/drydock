@@ -1,0 +1,12 @@
+id: carts-never-expire
+title: Abandoned carts never expire
+mode: issue
+clouds: [aws]
+inspector:
+  cloud: aws
+  service: nosql
+objective: Configure retaildemostore-carts so items expire using the ttl attribute while keeping retaildemostore-carts and retaildemostore-orders GSIs intact.
+brief: brief.md
+starter: starter
+checks: checks.yaml
+seed: seed.yaml

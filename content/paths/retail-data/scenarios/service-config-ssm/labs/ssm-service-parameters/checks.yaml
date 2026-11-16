@@ -1,0 +1,25 @@
+checks:
+  - id: stack-bucket-param
+    argv: ["aws", "ssm", "get-parameter", "--name", "/retaildemostore/stack_bucket"]
+    expect_exit: 0
+    expect_json_includes:
+      Parameter:
+        Name: /retaildemostore/stack_bucket
+        Type: String
+        Value: retaildemostore-stack
+  - id: eventbus-param
+    argv: ["aws", "ssm", "get-parameter", "--name", "/retaildemostore/eventbus"]
+    expect_exit: 0
+    expect_json_includes:
+      Parameter:
+        Name: /retaildemostore/eventbus
+        Type: String
+        Value: retaildemostore-bus
+  - id: opensearch-endpoint-param
+    argv: ["aws", "ssm", "get-parameter", "--name", "/retaildemostore/opensearch/endpoint"]
+    expect_exit: 0
+    expect_json_includes:
+      Parameter:
+        Name: /retaildemostore/opensearch/endpoint
+        Type: String
+        Value: https://search.retaildemostore.local

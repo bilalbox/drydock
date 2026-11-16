@@ -1,0 +1,23 @@
+id: origin-access-and-policies
+title: CloudFront OAC and cache policies
+mode: guided
+clouds: [aws]
+inspector:
+  cloud: aws
+  service: cdn
+objective: Create a CloudFront Origin Access Control (retaildemostore-oac), Cache Policy (retaildemostore-cache-policy), and Origin Request Policy (retaildemostore-origin-request-policy).
+brief: ../../scenario.md
+steps: steps.md
+starter: starter
+checks: checks.yaml
+references:
+  - title: Restricting access to an Amazon S3 origin with Origin Access Control
+    url: https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/private-content-restricting-access-to-s3.html
+    why: >-
+      Origin Access Control signs CloudFront requests to a private S3 bucket with
+      SigV4 so the bucket stays closed to direct internet access.
+  - title: Managing how long content stays in the cache (cache policies)
+    url: https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/controlling-the-cache-key.html
+    why: >-
+      Cache policies separate cache-key and TTL settings from origin-forwarding
+      settings so static frontend assets cache cleanly.

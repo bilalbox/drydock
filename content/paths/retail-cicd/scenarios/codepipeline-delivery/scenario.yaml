@@ -1,0 +1,5 @@
+id: codepipeline-delivery
+title: S3-backed CodePipeline and EventBridge trigger
+labs:
+  - s3-source-codepipeline
+  - pipeline-event-trigger

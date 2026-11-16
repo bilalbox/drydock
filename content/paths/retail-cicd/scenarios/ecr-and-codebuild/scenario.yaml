@@ -1,0 +1,6 @@
+id: ecr-and-codebuild
+title: ECR repository and CodeBuild project
+labs:
+  - ecr-repository-and-artifacts
+  - service-codebuild-project
+  - source-bucket-no-versioning

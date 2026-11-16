@@ -1,0 +1,23 @@
+id: cognito-user-pool-and-client
+title: Cognito User Pool and SPA client
+mode: guided
+clouds: [aws]
+inspector:
+  cloud: aws
+  service: cognito
+objective: Create the retaildemostore-user-pool Cognito User Pool and retaildemostore-web-client public SPA app client.
+brief: ../../scenario.md
+steps: steps.md
+starter: starter
+checks: checks.yaml
+references:
+  - title: Getting started with user pools
+    url: https://docs.aws.amazon.com/cognito/latest/developerguide/cognito-user-identity-pools.html
+    why: >-
+      A Cognito User Pool provides the shopper directory, password policy, and
+      authentication flows for the storefront web UI.
+  - title: Configuring a user pool app client
+    url: https://docs.aws.amazon.com/cognito/latest/developerguide/user-pool-settings-client-apps.html
+    why: >-
+      Browser SPAs cannot protect a client secret, so the app client omits a
+      secret and enables SRP and user-password flows.

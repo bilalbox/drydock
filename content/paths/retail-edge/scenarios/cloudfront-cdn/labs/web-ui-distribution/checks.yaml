@@ -1,0 +1,26 @@
+checks:
+  - id: distribution-enabled
+    argv: ["aws", "cloudfront", "list-distributions"]
+    expect_exit: 0
+    expect_json_includes:
+      DistributionList:
+        Items:
+          - Enabled: true
+            Status: Deployed
+            Comment: Retail Demo Store Web UI
+            Origins:
+              Items:
+                - Id: web-ui-s3
+                  DomainName: retaildemostore-web-ui.s3.us-east-1.amazonaws.com
+  - id: web-ui-bucket-policy-set
+    argv: ["aws", "s3api", "get-bucket-policy", "--bucket", "retaildemostore-web-ui"]
+    expect_exit: 0
+  - id: web-ui-public-access-blocked
+    argv: ["aws", "s3api", "get-public-access-block", "--bucket", "retaildemostore-web-ui"]
+    expect_exit: 0
+    expect_json:
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        IgnorePublicAcls: true
+        BlockPublicPolicy: true
+        RestrictPublicBuckets: true

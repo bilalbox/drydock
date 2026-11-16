@@ -1,0 +1,6 @@
+id: core-vpc
+title: Multi-AZ VPC and subnets
+labs:
+  - vpc-and-igw
+  - public-and-private-subnets
+  - subnet-cidr-overlap

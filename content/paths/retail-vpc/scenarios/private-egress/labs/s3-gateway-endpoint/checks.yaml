@@ -1,0 +1,16 @@
+checks:
+  - id: s3-endpoint-available
+    argv: ["aws", "ec2", "describe-vpc-endpoints", "--filters", "Name=tag:Name,Values=retaildemostore-s3-endpoint"]
+    expect_exit: 0
+    expect_json_includes:
+      VpcEndpoints:
+        - ServiceName: com.amazonaws.us-east-1.s3
+          VpcEndpointType: Gateway
+          State: available
+  - id: nat-gateways-preserved
+    argv: ["aws", "ec2", "describe-nat-gateways", "--filter", "Name=tag:Name,Values=retaildemostore-nat-1,retaildemostore-nat-2"]
+    expect_exit: 0
+    expect_json_includes:
+      NatGateways:
+        - State: available
+        - State: available

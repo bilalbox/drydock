@@ -1,0 +1,12 @@
+id: web-ui-public-exposure
+title: Web UI bucket allows public policies
+mode: issue
+clouds: [aws]
+inspector:
+  cloud: aws
+  service: storage
+objective: Block all four public access settings on retaildemostore-web-ui while keeping AES256 encryption and retaildemostore-logging intact.
+brief: brief.md
+starter: starter
+checks: checks.yaml
+seed: seed.yaml

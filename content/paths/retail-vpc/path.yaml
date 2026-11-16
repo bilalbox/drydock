@@ -1,0 +1,6 @@
+id: retail-vpc
+title: Retail Demo Store networking
+summary: Build the multi-AZ VPC, public and private subnets, NAT egress, and S3 gateway endpoint for the Retail Demo Store.
+scenarios:
+  - core-vpc
+  - private-egress

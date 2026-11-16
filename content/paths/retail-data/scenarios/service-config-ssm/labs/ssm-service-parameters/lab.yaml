@@ -1,0 +1,19 @@
+id: ssm-service-parameters
+title: Shared SSM service parameters
+mode: guided
+clouds: [aws]
+inspector:
+  cloud: aws
+  service: parameters
+objective: Create SSM Parameter Store String parameters for the stack bucket, EventBridge bus name, and OpenSearch endpoint under /retaildemostore/.
+brief: ../../scenario.md
+steps: steps.md
+starter: starter
+checks: checks.yaml
+references:
+  - title: AWS Systems Manager Parameter Store
+    url: https://docs.aws.amazon.com/systems-manager/latest/userguide/systems-manager-parameter-store.html
+    why: >-
+      Parameter Store provides hierarchical key-value configuration under
+      /retaildemostore/ so ECS tasks and pipelines discover shared resource names
+      without hardcoding them in images.

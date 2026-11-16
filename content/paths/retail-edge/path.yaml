@@ -1,0 +1,7 @@
+id: retail-edge
+title: Retail Demo Store web edge & auth
+summary: Provision private S3 web asset buckets, CloudFront CDN with Origin Access Control, and Cognito user and identity pools.
+scenarios:
+  - web-ui-buckets
+  - cloudfront-cdn
+  - shopper-identity

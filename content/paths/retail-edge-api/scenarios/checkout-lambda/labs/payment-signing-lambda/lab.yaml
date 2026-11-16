@@ -1,0 +1,23 @@
+id: payment-signing-lambda
+title: Payment signing Lambda function
+mode: guided
+clouds: [aws]
+inspector:
+  cloud: aws
+  service: serverless
+objective: Create an IAM execution role with CloudWatch Logs and Secrets Manager read permissions and deploy the retaildemostore-payment-signing Python Lambda function from function.zip.
+brief: ../../scenario.md
+steps: steps.md
+starter: starter
+checks: checks.yaml
+references:
+  - title: Building Lambda functions with Python
+    url: https://docs.aws.amazon.com/lambda/latest/dg/lambda-python.html
+    why: >-
+      A Python Lambda function packages its handler module in a deployment zip
+      and declares runtime, handler entrypoint, and IAM execution role.
+  - title: AWS Lambda execution role
+    url: https://docs.aws.amazon.com/lambda/latest/dg/lambda-intro-execution-role.html
+    why: >-
+      The execution role lets Lambda write logs to CloudWatch and read the
+      checkout signing secret from Secrets Manager at runtime.

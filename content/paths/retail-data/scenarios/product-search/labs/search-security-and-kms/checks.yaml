@@ -1,0 +1,17 @@
+checks:
+  - id: opensearch-sg-ready
+    argv: ["aws", "ec2", "describe-security-groups", "--filters", "Name=group-name,Values=retaildemostore-opensearch-sg"]
+    expect_exit: 0
+    expect_json_includes:
+      SecurityGroups:
+        - GroupName: retaildemostore-opensearch-sg
+          IpPermissions:
+            - FromPort: 443
+              ToPort: 443
+              IpProtocol: tcp
+  - id: search-kms-alias-exists
+    argv: ["aws", "kms", "list-aliases"]
+    expect_exit: 0
+    expect_json_includes:
+      Aliases:
+        - AliasName: alias/retaildemostore-search

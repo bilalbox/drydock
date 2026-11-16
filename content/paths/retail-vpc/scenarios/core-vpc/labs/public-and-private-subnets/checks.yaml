@@ -1,0 +1,33 @@
+checks:
+  - id: public-subnets-ready
+    argv: ["aws", "ec2", "describe-subnets", "--filters", "Name=tag:Name,Values=retaildemostore-public-1,retaildemostore-public-2"]
+    expect_exit: 0
+    expect_json_includes:
+      Subnets:
+        - CidrBlock: "10.0.0.0/24"
+          AvailabilityZone: us-east-1a
+          MapPublicIpOnLaunch: true
+        - CidrBlock: "10.0.1.0/24"
+          AvailabilityZone: us-east-1b
+          MapPublicIpOnLaunch: true
+  - id: private-subnets-ready
+    argv: ["aws", "ec2", "describe-subnets", "--filters", "Name=tag:Name,Values=retaildemostore-private-1,retaildemostore-private-2"]
+    expect_exit: 0
+    expect_json_includes:
+      Subnets:
+        - CidrBlock: "10.0.2.0/24"
+          AvailabilityZone: us-east-1a
+          MapPublicIpOnLaunch: false
+        - CidrBlock: "10.0.3.0/24"
+          AvailabilityZone: us-east-1b
+          MapPublicIpOnLaunch: false
+  - id: public-route-table-ready
+    argv: ["aws", "ec2", "describe-route-tables", "--filters", "Name=tag:Name,Values=retaildemostore-public-rt"]
+    expect_exit: 0
+    expect_json_includes:
+      RouteTables:
+        - Routes:
+            - DestinationCidrBlock: "0.0.0.0/0"
+              State: active
+          Associations:
+            - Main: false

@@ -1,0 +1,12 @@
+checks:
+  - id: payment-lambda-created
+    argv: ["aws", "lambda", "get-function", "--function-name", "retaildemostore-payment-signing"]
+    expect_exit: 0
+    expect_json_includes:
+      Configuration:
+        FunctionName: retaildemostore-payment-signing
+        Runtime: python3.12
+        Handler: lambda_function.lambda_handler
+  - id: payment-lambda-role-exists
+    argv: ["aws", "iam", "get-role", "--role-name", "retaildemostore-payment-signing-role"]
+    expect_exit: 0

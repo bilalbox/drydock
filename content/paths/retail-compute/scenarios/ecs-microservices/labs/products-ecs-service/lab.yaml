@@ -1,0 +1,23 @@
+id: products-ecs-service
+title: Products Fargate task and service
+mode: guided
+clouds: [aws]
+inspector:
+  cloud: aws
+  service: containers
+objective: Create the retaildemostore-products Fargate task definition and products ECS service attached to the NLB target group and Cloud Map service registry.
+brief: ../../scenario.md
+steps: steps.md
+starter: starter
+checks: checks.yaml
+references:
+  - title: Amazon ECS task definitions
+    url: https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task_definitions.html
+    why: >-
+      Fargate task definitions require awsvpc network mode, compatible CPU/memory
+      sizing, and explicit execution and task IAM roles.
+  - title: Use load balancing to distribute Amazon ECS service traffic
+    url: https://docs.aws.amazon.com/AmazonECS/latest/developerguide/service-load-balancing.html
+    why: >-
+      Linking an ECS service to an NLB target group and Cloud Map registry keeps
+      both the API Gateway VPC Link and internal service DNS updated as tasks start.

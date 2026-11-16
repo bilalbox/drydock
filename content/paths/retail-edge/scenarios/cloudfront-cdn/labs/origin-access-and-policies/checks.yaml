@@ -1,0 +1,30 @@
+checks:
+  - id: oac-created
+    argv: ["aws", "cloudfront", "list-origin-access-controls"]
+    expect_exit: 0
+    expect_json_includes:
+      OriginAccessControlList:
+        Items:
+          - Name: retaildemostore-oac
+            OriginAccessControlOriginType: s3
+            SigningBehavior: always
+            SigningProtocol: sigv4
+  - id: cache-policy-created
+    argv: ["aws", "cloudfront", "list-cache-policies", "--type", "custom"]
+    expect_exit: 0
+    expect_json_includes:
+      CachePolicyList:
+        Items:
+          - CachePolicy:
+              CachePolicyConfig:
+                Name: retaildemostore-cache-policy
+                DefaultTTL: 86400
+  - id: origin-request-policy-created
+    argv: ["aws", "cloudfront", "list-origin-request-policies", "--type", "custom"]
+    expect_exit: 0
+    expect_json_includes:
+      OriginRequestPolicyList:
+        Items:
+          - OriginRequestPolicy:
+              OriginRequestPolicyConfig:
+                Name: retaildemostore-origin-request-policy

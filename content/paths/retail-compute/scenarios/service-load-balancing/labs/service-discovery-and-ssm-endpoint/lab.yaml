@@ -1,0 +1,11 @@
+id: service-discovery-and-ssm-endpoint
+title: Cloud Map service and SSM endpoint
+mode: challenge
+clouds: [aws]
+inspector:
+  cloud: aws
+  service: parameters
+objective: Register the products Cloud Map service in retaildemostore.local and publish the load balancer URL to SSM Parameter Store at /retaildemostore/services_load_balancers/products.
+brief: brief.md
+starter: starter
+checks: checks.yaml

@@ -1,0 +1,5 @@
+id: service-config-ssm
+title: Service parameters and payment secrets
+labs:
+  - ssm-service-parameters
+  - payment-secret-store

@@ -1,0 +1,23 @@
+id: http-api-and-vpc-link
+title: HTTP API, VPC Link, and $default stage
+mode: guided
+clouds: [aws]
+inspector:
+  cloud: aws
+  service: apigateway
+objective: Create the retaildemostore-http-api HTTP API, the retaildemostore-vpclink VPC Link in the private subnets, and the auto-deployed $default stage with CloudWatch access logs.
+brief: ../../scenario.md
+steps: steps.md
+starter: starter
+checks: checks.yaml
+references:
+  - title: Working with HTTP APIs in API Gateway
+    url: https://docs.aws.amazon.com/apigateway/latest/developerguide/http-api.html
+    why: >-
+      API Gateway HTTP APIs provide low-latency REST routing with an auto-deployed
+      $default stage for the storefront frontend.
+  - title: Configure private integrations for HTTP APIs
+    url: https://docs.aws.amazon.com/apigateway/latest/developerguide/http-api-develop-integrations-private.html
+    why: >-
+      A VPC Link bridges API Gateway into private VPC subnets so traffic reaches
+      internal Network Load Balancers without exposing microservices publicly.

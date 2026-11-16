@@ -1,0 +1,18 @@
+checks:
+  - id: products-task-definition-active
+    argv: ["aws", "ecs", "describe-task-definition", "--task-definition", "retaildemostore-products"]
+    expect_exit: 0
+    expect_json_includes:
+      taskDefinition:
+        family: retaildemostore-products
+        networkMode: awsvpc
+        status: ACTIVE
+  - id: products-ecs-service-active
+    argv: ["aws", "ecs", "describe-services", "--cluster", "retaildemostore", "--services", "products"]
+    expect_exit: 0
+    expect_json_includes:
+      services:
+        - serviceName: products
+          status: ACTIVE
+          desiredCount: 1
+          launchType: FARGATE

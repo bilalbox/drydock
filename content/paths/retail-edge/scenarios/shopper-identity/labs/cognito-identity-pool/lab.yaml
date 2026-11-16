@@ -1,0 +1,11 @@
+id: cognito-identity-pool
+title: Cognito Identity Pool and roles
+mode: challenge
+clouds: [aws]
+inspector:
+  cloud: aws
+  service: cognito
+objective: Create the retaildemostore_identity_pool Cognito Identity Pool allowing unauthenticated identities, link it to the user pool and SPA client, and attach authenticated and unauthenticated IAM roles.
+brief: brief.md
+starter: starter
+checks: checks.yaml

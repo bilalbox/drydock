@@ -1,0 +1,11 @@
+id: payment-secret-store
+title: Checkout signing secret
+mode: challenge
+clouds: [aws]
+inspector:
+  cloud: aws
+  service: secrets
+objective: Create the retaildemostore/payment-signing-key Secrets Manager secret with a JSON payload and a least-privilege IAM policy allowing GetSecretValue on it.
+brief: brief.md
+starter: starter
+checks: checks.yaml

@@ -1,0 +1,23 @@
+id: internal-nlb-and-target-group
+title: Internal NLB and IP target group
+mode: guided
+clouds: [aws]
+inspector:
+  cloud: aws
+  service: loadbalancing
+objective: Create the retaildemostore-products-nlb internal Network Load Balancer, retaildemostore-products-tg IP target group with HTTP / health check, and TCP:80 forwarding listener.
+brief: ../../scenario.md
+steps: steps.md
+starter: starter
+checks: checks.yaml
+references:
+  - title: Network Load Balancers
+    url: https://docs.aws.amazon.com/elasticloadbalancing/latest/network/introduction.html
+    why: >-
+      An internal NLB provides a stable private listener ARN that API Gateway
+      HTTP API VPC Links target without exposing microservices to the public internet.
+  - title: Target groups for your Network Load Balancers
+    url: https://docs.aws.amazon.com/elasticloadbalancing/latest/network/load-balancer-target-groups.html
+    why: >-
+      Fargate tasks using awsvpc networking register by private IP address, so
+      the target group uses target_type = "ip" and probes HTTP / on port 80.

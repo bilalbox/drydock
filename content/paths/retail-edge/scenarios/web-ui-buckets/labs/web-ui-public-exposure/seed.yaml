@@ -1,0 +1,9 @@
+apply: true
+mutate:
+  - - aws
+    - s3api
+    - put-public-access-block
+    - --bucket
+    - retaildemostore-web-ui
+    - --public-access-block-configuration
+    - BlockPublicAcls=false,IgnorePublicAcls=false,BlockPublicPolicy=false,RestrictPublicBuckets=false

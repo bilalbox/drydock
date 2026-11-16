@@ -1,0 +1,11 @@
+id: subnet-cidr-overlap
+title: Public subnet deployment fails
+mode: issue
+clouds: [aws]
+inspector:
+  cloud: aws
+  service: networking
+objective: Resolve the deployment error so all four subnets (10.0.0.0/24, 10.0.1.0/24, 10.0.2.0/24, 10.0.3.0/24) across us-east-1a and us-east-1b and the retaildemostore-public-rt route table are provisioned.
+brief: brief.md
+starter: starter
+checks: checks.yaml

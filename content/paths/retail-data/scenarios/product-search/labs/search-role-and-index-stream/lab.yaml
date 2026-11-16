@@ -1,0 +1,11 @@
+id: search-role-and-index-stream
+title: Search service IAM role and catalog stream
+mode: challenge
+clouds: [aws]
+inspector:
+  cloud: aws
+  service: streams
+objective: Create the retaildemostore-catalog-index Kinesis stream (1 shard, 24h retention) and the retaildemostore-search-service IAM role with permissions for KMS decryption, Kinesis reads, and OpenSearch HTTP access.
+brief: brief.md
+starter: starter
+checks: checks.yaml

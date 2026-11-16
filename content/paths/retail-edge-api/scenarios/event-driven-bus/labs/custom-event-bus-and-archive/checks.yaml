@@ -1,0 +1,24 @@
+checks:
+  - id: event-bus-created
+    argv: ["aws", "events", "describe-event-bus", "--name", "retaildemostore-bus"]
+    expect_exit: 0
+    expect_json_includes:
+      Name: retaildemostore-bus
+  - id: event-archive-created
+    argv: ["aws", "events", "describe-archive", "--archive-name", "retaildemostore-arch"]
+    expect_exit: 0
+    expect_json_includes:
+      ArchiveName: retaildemostore-arch
+      RetentionDays: 120
+  - id: catch-all-rule-disabled
+    argv: ["aws", "events", "describe-rule", "--name", "CatchAllRetailDemoStoreEventsToCloudWatchLogs", "--event-bus-name", "retaildemostore-bus"]
+    expect_exit: 0
+    expect_json_includes:
+      Name: CatchAllRetailDemoStoreEventsToCloudWatchLogs
+      State: DISABLED
+  - id: eventbus-ssm-param
+    argv: ["aws", "ssm", "get-parameter", "--name", "RetailDemoStore-eventbus"]
+    expect_exit: 0
+    expect_json_includes:
+      Parameter:
+        Value: retaildemostore-bus

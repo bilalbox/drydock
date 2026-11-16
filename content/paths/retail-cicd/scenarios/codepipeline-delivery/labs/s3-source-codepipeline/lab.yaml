@@ -1,0 +1,23 @@
+id: s3-source-codepipeline
+title: S3-sourced CodePipeline
+mode: guided
+clouds: [aws]
+inspector:
+  cloud: aws
+  service: cicd
+objective: Create the retaildemostore-codepipeline-role IAM role and the two-stage retaildemostore-products-pipeline CodePipeline (S3 Source to CodeBuild Build).
+brief: ../../scenario.md
+steps: steps.md
+starter: starter
+checks: checks.yaml
+references:
+  - title: Create a pipeline in CodePipeline
+    url: https://docs.aws.amazon.com/codepipeline/latest/userguide/pipelines-create.html
+    why: >-
+      CodePipeline coordinates artifacts between an S3 Source stage and a
+      CodeBuild Build stage using a dedicated service role.
+  - title: Trigger CodePipeline from S3 with EventBridge
+    url: https://docs.aws.amazon.com/codepipeline/latest/userguide/create-cloudtrail-S3-source.html
+    why: >-
+      Setting PollForSourceChanges to false prepares the S3 source stage for
+      event-driven execution via EventBridge rather than periodic polling.

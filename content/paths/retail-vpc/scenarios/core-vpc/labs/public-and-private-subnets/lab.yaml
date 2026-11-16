@@ -1,0 +1,11 @@
+id: public-and-private-subnets
+title: Public and private subnets
+mode: challenge
+clouds: [aws]
+inspector:
+  cloud: aws
+  service: networking
+objective: Create two public subnets (10.0.0.0/24, 10.0.1.0/24) and two private subnets (10.0.2.0/24, 10.0.3.0/24) across us-east-1a and us-east-1b, and route the public subnets to the Internet Gateway.
+brief: brief.md
+starter: starter
+checks: checks.yaml

@@ -1,0 +1,11 @@
+id: task-execution-and-task-roles
+title: ECS execution and task IAM roles
+mode: challenge
+clouds: [aws]
+inspector:
+  cloud: aws
+  service: identity
+objective: Create the retaildemostore-ecs-execution-role and retaildemostore-products-task-role IAM roles with policies for image pulls/logs and DynamoDB/SSM access.
+brief: brief.md
+starter: starter
+checks: checks.yaml

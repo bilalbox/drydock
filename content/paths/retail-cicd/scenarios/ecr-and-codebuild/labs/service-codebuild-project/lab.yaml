@@ -1,0 +1,11 @@
+id: service-codebuild-project
+title: Microservice CodeBuild project
+mode: challenge
+clouds: [aws]
+inspector:
+  cloud: aws
+  service: cicd
+objective: Create the retaildemostore-codebuild-role IAM role and the retaildemostore-products-build CodeBuild project using LINUX_CONTAINER with privileged mode and CODEPIPELINE source/artifacts.
+brief: brief.md
+starter: starter
+checks: checks.yaml

@@ -1,0 +1,11 @@
+id: order-event-consumer-lambda
+title: Order event SQS consumer Lambda
+mode: challenge
+clouds: [aws]
+inspector:
+  cloud: aws
+  service: serverless
+objective: Create an IAM execution role with SQS polling permissions, deploy the retaildemostore-order-consumer Python Lambda function, and connect it to the retaildemostore-orders-events SQS queue with an event source mapping (batch size 10).
+brief: brief.md
+starter: starter
+checks: checks.yaml

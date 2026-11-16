@@ -1,0 +1,5 @@
+id: ecs-foundation
+title: ECS cluster and Cloud Map namespace
+labs:
+  - ecs-cluster-and-namespace
+  - task-execution-and-task-roles

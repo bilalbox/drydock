@@ -1,0 +1,17 @@
+checks:
+  - id: ecr-repo-created
+    argv: ["aws", "ecr", "describe-repositories", "--repository-names", "retaildemostore/products"]
+    expect_exit: 0
+    expect_json_includes:
+      repositories:
+        - repositoryName: retaildemostore/products
+          imageScanningConfiguration:
+            scanOnPush: true
+  - id: artifacts-bucket-exists
+    argv: ["aws", "s3api", "head-bucket", "--bucket", "retaildemostore-pipeline-artifacts"]
+    expect_exit: 0
+  - id: source-bucket-versioned
+    argv: ["aws", "s3api", "get-bucket-versioning", "--bucket", "retaildemostore-pipeline-source"]
+    expect_exit: 0
+    expect_json:
+      Status: Enabled
