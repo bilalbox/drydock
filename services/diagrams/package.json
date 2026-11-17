@@ -1,0 +1,16 @@
+{
+  "name": "drydock-diagrams",
+  "private": true,
+  "type": "module",
+  "description": "Terraform state/plan to architecture diagram. Original implementation; no TerraVision code or assets.",
+  "scripts": {
+    "test": "node --test test/*.test.ts",
+    "typecheck": "tsc --noEmit",
+    "icons": "node scripts/fetch-aws-icons.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "fflate": "^0.8.3",
+    "typescript": "^5.9.0"
+  }
+}

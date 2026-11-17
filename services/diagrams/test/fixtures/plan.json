@@ -1,0 +1,34 @@
+{
+  "format_version": "1.2",
+  "prior_state": { "values": { "root_module": { "resources": [
+    { "address": "aws_vpc.main", "mode": "managed", "type": "aws_vpc", "name": "main", "values": { "id": "vpc-0abc123" } },
+    { "address": "aws_s3_bucket.logs", "mode": "managed", "type": "aws_s3_bucket", "name": "logs", "values": { "id": "northline-logs" } },
+    { "address": "aws_security_group.old", "mode": "managed", "type": "aws_security_group", "name": "old", "values": { "id": "sg-0old0001" } },
+    { "address": "aws_instance.web", "mode": "managed", "type": "aws_instance", "name": "web", "values": { "id": "i-0web0001" } }
+  ] } } },
+  "resource_drift": [
+    { "address": "aws_vpc.main", "mode": "managed", "type": "aws_vpc", "name": "main",
+      "change": { "actions": ["update"], "before": { "tags": { "Env": "lab" } }, "after": { "tags": { "Env": "lab", "Owner": "console" } } } }
+  ],
+  "resource_changes": [
+    { "address": "aws_vpc.main", "mode": "managed", "type": "aws_vpc", "name": "main",
+      "change": { "actions": ["no-op"], "before": { "tags": { "Env": "lab" } }, "after": { "tags": { "Env": "lab" } } } },
+    { "address": "aws_subnet.a", "mode": "managed", "type": "aws_subnet", "name": "a",
+      "change": { "actions": ["create"], "before": null, "after": { "cidr_block": "10.0.1.0/24" }, "after_unknown": { "id": true, "vpc_id": true } } },
+    { "address": "aws_s3_bucket.logs", "mode": "managed", "type": "aws_s3_bucket", "name": "logs",
+      "change": { "actions": ["update"], "before": { "tags": null, "secret": "old" }, "after": { "tags": { "Env": "lab" }, "secret": "new" },
+        "before_sensitive": { "secret": true }, "after_sensitive": { "secret": true } } },
+    { "address": "aws_security_group.old", "mode": "managed", "type": "aws_security_group", "name": "old",
+      "change": { "actions": ["delete"], "before": { "id": "sg-0old0001" }, "after": null } },
+    { "address": "aws_instance.web", "mode": "managed", "type": "aws_instance", "name": "web",
+      "change": { "actions": ["delete", "create"], "before": { "ami": "ami-1" }, "after": { "ami": "ami-2" } } },
+    { "address": "data.aws_caller_identity.me", "mode": "data", "type": "aws_caller_identity", "name": "me",
+      "change": { "actions": ["read"], "before": null, "after": {} } }
+  ],
+  "configuration": { "root_module": { "resources": [
+    { "address": "aws_subnet.a", "mode": "managed", "expressions": { "vpc_id": { "references": ["aws_vpc.main.id", "aws_vpc.main"] } } },
+    { "address": "aws_instance.web", "mode": "managed", "expressions": {
+        "subnet_id": { "references": ["aws_subnet.a.id", "aws_subnet.a"] },
+        "vpc_security_group_ids": [ { "references": ["aws_security_group.old.id", "aws_security_group.old"] } ] } }
+  ] } }
+}

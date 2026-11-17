@@ -1,0 +1,23 @@
+{
+  "format_version": "1.0",
+  "values": {
+    "root_module": {
+      "resources": [
+        { "address": "aws_vpc.main", "mode": "managed", "type": "aws_vpc", "name": "main",
+          "values": { "id": "vpc-0abc123", "arn": "arn:aws:ec2:us-east-1:000000000000:vpc/vpc-0abc123", "cidr_block": "10.0.0.0/16" } },
+        { "address": "aws_subnet.a", "mode": "managed", "type": "aws_subnet", "name": "a",
+          "values": { "id": "subnet-0aaa111", "vpc_id": "vpc-0abc123", "cidr_block": "10.0.1.0/24" } },
+        { "address": "aws_s3_bucket.logs", "mode": "managed", "type": "aws_s3_bucket", "name": "logs",
+          "values": { "id": "northline-logs", "arn": "arn:aws:s3:::northline-logs" } },
+        { "address": "data.aws_caller_identity.me", "mode": "data", "type": "aws_caller_identity", "name": "me",
+          "values": { "id": "000000000000" } }
+      ],
+      "child_modules": [
+        { "address": "module.app", "resources": [
+          { "address": "module.app.aws_sqs_queue.jobs[0]", "mode": "managed", "type": "aws_sqs_queue", "name": "jobs",
+            "values": { "id": "http://sqs/jobs-0", "arn": "arn:aws:sqs:us-east-1:000000000000:jobs-0" } }
+        ] }
+      ]
+    }
+  }
+}
