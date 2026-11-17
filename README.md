@@ -114,6 +114,7 @@ Generated `assets/` remain ignored by Git and Docker's build context. Original
 source is MIT licensed; vendor icons and elkjs retain their own terms (see
 `NOTICE`). No TerraVision code or assets are used.
 
-Diagram fixtures are synthetic schema examples. Real toolbox captures covering
-all plan actions, Floci drift, and module/index references remain an integration
-validation task; they have not been verified against a running emulator.
+Diagram tests include real Node-toolbox Terraform state and plan captures against
+Floci, covering every change action and API-induced drift, plus synthetic
+fixtures for sensitive values and module/index reference cases. Capture details
+are recorded in `services/diagrams/test/fixtures/README.md`.

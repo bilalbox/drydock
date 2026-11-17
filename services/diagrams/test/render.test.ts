@@ -57,3 +57,45 @@ test("standalone SVG has a stable layout for unmapped resources", async t => {
     resource("custom_resource", "two", { parent: "first-resource" }),
   ] } } }));
 });
+
+test("state attachments sharing the bucket ID still fold into the bucket", async () => {
+  const svg = await renderDiagram({ values: { root_module: { resources: [
+    resource("aws_s3_bucket", "logs", { id: "logs-bucket" }),
+    resource("aws_s3_bucket_versioning", "logs", { id: "logs-bucket", bucket: "logs-bucket" }),
+  ] } } });
+  assert.match(svg, /data-badge="aws_s3_bucket_versioning.logs"/);
+});
+
+test("module instances keep their own subnet references", async () => {
+  const resources = [0, 1].flatMap(i => ["aws_subnet.a", "aws_instance.web"].map(address => ({
+    address: `module.net[${i}].${address}`, mode: "managed", type: address.split(".")[0], name: address.split(".")[1],
+    change: { actions: ["no-op"], before: {}, after: {} },
+  })));
+  const svg = await renderDiagram({ resource_changes: resources, configuration: { root_module: { module_calls: { net: { module: { resources: [
+    { address: "aws_instance.web", mode: "managed", expressions: { subnet_id: { references: ["aws_subnet.a.id"] } } },
+  ] } } } } } });
+  const boundary = svg.indexOf('data-address="module.net[1].aws_subnet.a"');
+  assert.ok(svg.indexOf('data-address="module.net[0].aws_instance.web"') < boundary);
+  assert.ok(svg.indexOf('data-address="module.net[1].aws_instance.web"') > boundary);
+});
+
+test("folded drift keeps an orange dashed outline independent of action", async () => {
+  const attachment = { address: "aws_s3_bucket_versioning.logs", mode: "managed", type: "aws_s3_bucket_versioning", name: "logs",
+    change: { actions: ["update"], before: { versioning_configuration: "Disabled" }, after: { versioning_configuration: "Enabled" } } };
+  const svg = await renderDiagram({ resource_changes: [attachment], resource_drift: [attachment], prior_state: { values: { root_module: { resources: [
+    resource("aws_s3_bucket", "logs", { id: "logs-bucket" }),
+    resource("aws_s3_bucket_versioning", "logs", { bucket: "logs-bucket" }),
+  ] } } } });
+  assert.match(svg, /data-badge="aws_s3_bucket_versioning.logs"[\s\S]*stroke="#ea580c"[^>]*stroke-dasharray/);
+});
+
+test("real toolbox state and plan render all actions and Floci drift", async () => {
+  const fs = await import("node:fs");
+  const state = JSON.parse(fs.readFileSync(new URL("./fixtures/real-state.json", import.meta.url), "utf8"));
+  const plan = JSON.parse(fs.readFileSync(new URL("./fixtures/real-plan.json", import.meta.url), "utf8"));
+  assert.ok(plan.resource_drift.some((r: { address: string }) => r.address === "aws_s3_bucket.update"));
+  assert.match(await renderDiagram(state), /aws_s3_bucket.update/);
+  const svg = await renderDiagram(plan);
+  for (const action of ["create", "update", "delete", "replace"]) assert.match(svg, new RegExp(`data-action="${action}"`));
+  assert.match(svg, /stroke-dasharray="6 4"/);
+});

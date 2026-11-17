@@ -172,13 +172,19 @@ function configEdges(root: TfConfigModule, nodes: Map<string, DiagramNode>): Dia
       const refs = [...collectRefs(res.expressions), ...(res.depends_on ?? [])];
       for (const ref of refs) {
         if (ref.startsWith("data.")) continue;
-        const qualified = prefix + ref;
-        const exact = [...nodes.keys()].filter(address => qualified === address || qualified.startsWith(address + "."));
-        const baseRef = qualified.replace(/\[[^\]]*\]/g, "");
-        const targets = exact.length ? exact : [...byBase.keys()].filter(base => baseRef === base || baseRef.startsWith(base + ".")).flatMap(base => byBase.get(base)!);
         const sources = nodes.has(fromBase) ? [fromBase] : byBase.get(fromBase.replace(/\[[^\]]*\]/g, "")) ?? [];
-        for (const from of sources)
+        for (const from of sources) {
+          // Configuration omits module instance keys. Recover them from each source.
+          const sourcePrefix = from.slice(0, from.lastIndexOf(res.address.split(".")[0] + "."));
+          const qualified = sourcePrefix + ref;
+          const exact = [...nodes.keys()].filter(address => qualified === address || qualified.startsWith(address + "."));
+          const baseRef = qualified.replace(/\[[^\]]*\]/g, "");
+          const targets = exact.length ? exact : [...byBase.keys()]
+            .filter(base => baseRef === base || baseRef.startsWith(base + "."))
+            .flatMap(base => byBase.get(base)!)
+            .filter(address => address.startsWith(sourcePrefix));
           for (const to of targets) if (to !== from) edges.push({ from, to });
+        }
       }
     }
     for (const [name, call] of Object.entries(mod.module_calls ?? {}))
@@ -202,7 +208,12 @@ function valueEdges(resources: Map<string, TfStateResource>): DiagramEdge[] {
     for (const key of ["id", "arn"]) {
       const v = r.values[key];
       // Short ids ("a", "1") would match everywhere; require some specificity.
-      if (typeof v === "string" && v.length >= 6) owner.set(v, r.address);
+      if (typeof v === "string" && v.length >= 6) {
+        const previous = owner.get(v);
+        // Attachment resources often share their parent's ID (e.g. bucket versioning).
+        // Prefer the canonical resource over a configuration attachment.
+        if (!previous || r.type.length < resources.get(previous)!.type.length) owner.set(v, r.address);
+      }
     }
   }
   const edges: DiagramEdge[] = [];
