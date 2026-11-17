@@ -1,4 +1,3 @@
-import fs from "node:fs";
 import path from "node:path";
 import { createDiagramRenderer } from "./diagram.js";
 import { randomUUID } from "node:crypto";
@@ -23,10 +22,9 @@ export class SessionError extends Error {
   }
 }
 
-/** Creates the Session manager owning active lab state, grading, progress, and attached sockets. */
+/** Creates the Session manager owning active lab state, grading, and attached sockets. */
 export function createSessionManager({
   workspacesDir = process.env.WORKSPACES_DIR ?? "/workspaces",
-  progressPath = process.env.PROGRESS_PATH ?? path.resolve("data/progress.json"),
   checksDir = process.env.CHECKS_DIR ?? "/opt/drydock/checks",
   lock,
   emulators = createEmulatorManager(),
@@ -104,7 +102,6 @@ export function createSessionManager({
       lab,
       sockets: new Set(),
     };
-    markStarted(progressPath, lab.id);
     return publicSession(active);
   }
 
@@ -118,18 +115,15 @@ export function createSessionManager({
   return {
     diagram: (mode) => enqueue(() => renderDiagram(requireActive(), mode, toolbox.run)),
     current: () => (active ? publicSession(active) : null),
-    progress: () => loadProgress(progressPath),
     open: (lab) => enqueue(() => openNow(lab)),
     reset: () => enqueue(() => openNow(requireActive().lab)),
     grade: () =>
       enqueue(async () => {
         const session = requireActive();
-        const attempt = await evaluateChecks(session.lab.checks, toolbox, {
+        return evaluateChecks(session.lab.checks, toolbox, {
           cwd: checksDir,
           env: session.env,
         });
-        recordAttempt(progressPath, session.labId, attempt);
-        return attempt;
       }),
     listFiles: () => {
       const session = requireActive();
@@ -264,36 +258,3 @@ function jsonIncludes(expected, actual) {
   return Object.is(expected, actual);
 }
 
-function loadProgress(file) {
-  try {
-    return JSON.parse(fs.readFileSync(file, "utf8"));
-  } catch {
-    return {};
-  }
-}
-
-function markStarted(file, labId) {
-  const progress = loadProgress(file);
-  const current = progress[labId] ?? { status: "not_started", attempts: 0 };
-  if (current.status !== "passed") current.status = "in_progress";
-  progress[labId] = current;
-  writeProgress(file, progress);
-  return progress;
-}
-
-function recordAttempt(file, labId, attempt) {
-  const progress = loadProgress(file);
-  const current = progress[labId] ?? { status: "in_progress", attempts: 0 };
-  current.attempts = (current.attempts ?? 0) + 1;
-  current.status = attempt.passed ? "passed" : "in_progress";
-  current.lastAttemptAt = new Date().toISOString();
-  if (attempt.passed) current.passedAt = current.lastAttemptAt;
-  progress[labId] = current;
-  writeProgress(file, progress);
-  return progress;
-}
-
-function writeProgress(file, progress) {
-  fs.mkdirSync(path.dirname(file), { recursive: true });
-  fs.writeFileSync(file, `${JSON.stringify(progress, null, 2)}\n`);
-}

@@ -4,9 +4,10 @@
   import Visual from "./lib/Visual.svelte";
   import Terminal from "./lib/Terminal.svelte";
   import { renderMarkdown } from "./lib/markdown.js";
+  import { PROGRESS_KEY, markStarted, readProgress, recordAttempt, writeProgress } from "./lib/progress.js";
 
   let catalog = $state(null);
-  let progress = $state({});
+  let progress = $state(storedProgress());
   let route = $state(readRoute());
   let session = $state(null);
   let attempt = $state(null);
@@ -63,13 +64,32 @@
     return { name: "home" };
   }
 
+  function storedProgress() {
+    try {
+      return readProgress(localStorage);
+    } catch {
+      return {};
+    }
+  }
+
+  function remember(next) {
+    progress = next;
+    try {
+      writeProgress(localStorage, next);
+    } catch {
+      // Site data can be blocked; the status still updates for this page view.
+    }
+  }
+
+  function syncStoredProgress(event) {
+    if (event.storageArea && event.storageArea !== localStorage) return;
+    if (event.key !== null && event.key !== PROGRESS_KEY) return;
+    progress = storedProgress();
+  }
+
   async function refresh() {
-    const [catalogResponse, progressResponse] = await Promise.all([
-      fetch("/api/catalog"),
-      fetch("/api/progress"),
-    ]);
+    const catalogResponse = await fetch("/api/catalog");
     catalog = await catalogResponse.json();
-    progress = await progressResponse.json();
   }
 
   async function syncSession() {
@@ -89,11 +109,12 @@
     ) {
       return;
     }
+    const labId = current.lab.id;
     await act("Starting the emulator and running terraform init…", async () => {
       const response = await fetch("/api/sessions", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ labId: current.lab.id }),
+        body: JSON.stringify({ labId }),
       });
       const body = await response.json();
       if (!response.ok) {
@@ -103,11 +124,12 @@
       session = body;
       attempt = null;
       tab = "editor";
-      await refresh();
+      remember(markStarted(progress, labId));
     });
   }
 
   async function reset() {
+    const labId = current.lab.id;
     await act("Resetting the emulator and the workspace…", async () => {
       const response = await fetch("/api/sessions/current/reset", { method: "POST" });
       const body = await response.json();
@@ -117,11 +139,12 @@
       }
       session = body;
       attempt = null;
-      await refresh();
+      remember(markStarted(progress, labId));
     });
   }
 
   async function check() {
+    const labId = current.lab.id;
     await act("Checking the emulator…", async () => {
       const response = await fetch("/api/sessions/current/check", { method: "POST" });
       const body = await response.json();
@@ -130,7 +153,7 @@
         throw new Error(body.error || "Check failed");
       }
       attempt = body;
-      await refresh();
+      remember(recordAttempt(progress, labId, body));
     });
   }
 
@@ -181,6 +204,8 @@
     return () => node.removeEventListener("beforematch", onMatch);
   }
 </script>
+
+<svelte:window onstorage={syncStoredProgress} />
 
 <div class="shell">
   <header>

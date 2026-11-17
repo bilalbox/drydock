@@ -16,7 +16,6 @@ function makeSessionForTest(toolboxRun) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "drydock-lab-test-"));
   return createSessionManager({
     workspacesDir: path.join(dir, "workspaces"),
-    progressPath: path.join(dir, "progress.json"),
     checksDir: "/opt/drydock/checks",
     lock,
     emulators: {

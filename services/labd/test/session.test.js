@@ -26,10 +26,9 @@ function makeFakeEmulators() {
   };
 }
 
-test("session startup prunes stale workspaces, and open/reset remove superseded workspaces and record progress", async () => {
+test("session startup prunes stale workspaces, and open/reset remove superseded workspaces", async () => {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "drydock-session-"));
   const workspacesDir = path.join(tmp, "workspaces");
-  const progressPath = path.join(tmp, "progress.json");
   const staleDir = path.join(workspacesDir, "stale-uuid");
   fs.mkdirSync(staleDir, { recursive: true });
   fs.writeFileSync(path.join(staleDir, "leftover.tf"), "# stale\n");
@@ -38,7 +37,6 @@ test("session startup prunes stale workspaces, and open/reset remove superseded 
   const toolboxCalls = [];
   const session = createSessionManager({
     workspacesDir,
-    progressPath,
     checksDir: "/opt/drydock/checks",
     lock,
     emulators,
@@ -70,13 +68,11 @@ test("session startup prunes stale workspaces, and open/reset remove superseded 
   });
 
   assert.equal(fs.existsSync(staleDir), false);
-  assert.deepEqual(session.progress(), {});
 
   const { lab: guided } = getLab(catalog, guidedLabId);
   const first = await session.open(guided);
   const firstWs = path.join(workspacesDir, first.id);
   assert.equal(fs.existsSync(firstWs), true);
-  assert.equal(session.progress()[guidedLabId].status, "in_progress");
   assert.deepEqual(emulators.calls, [
     ["stop", ["azure", "gcp", "oci"]],
     ["ensure", ["aws"]],
@@ -86,8 +82,6 @@ test("session startup prunes stale workspaces, and open/reset remove superseded 
 
   const attempt = await session.grade();
   assert.equal(attempt.passed, true);
-  assert.equal(session.progress()[guidedLabId].status, "passed");
-  assert.equal(session.progress()[guidedLabId].attempts, 1);
 
   const reset = await session.reset();
   assert.notEqual(reset.id, first.id);
@@ -107,7 +101,6 @@ test("failed open cleans up partially created workspace and keeps no active sess
   const workspacesDir = path.join(tmp, "workspaces");
   const session = createSessionManager({
     workspacesDir,
-    progressPath: path.join(tmp, "progress.json"),
     lock,
     emulators: makeFakeEmulators(),
     toolbox: {
@@ -132,7 +125,6 @@ test("labd server exposes HTTP/WS endpoints, enforces sessionId on writes, and c
 
   const session = createSessionManager({
     workspacesDir,
-    progressPath: path.join(tmp, "progress.json"),
     checksDir: "/opt/drydock/checks",
     lock,
     emulators: makeFakeEmulators(),
@@ -164,6 +156,9 @@ test("labd server exposes HTTP/WS endpoints, enforces sessionId on writes, and c
     const health = await fetch(`${base}/api/health`);
     assert.equal(health.status, 200);
     assert.deepEqual(await health.json(), { status: "ok" });
+
+    const progress = await fetch(`${base}/api/progress`);
+    assert.equal(progress.status, 404);
 
     const noFiles = await fetch(`${base}/api/sessions/current/files`);
     assert.equal(noFiles.status, 409);

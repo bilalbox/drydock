@@ -56,9 +56,6 @@ export function createLabdServer({
       if (req.method === "GET" && url.pathname === "/api/catalog") {
         return sendJson(res, 200, publicCatalog(catalog));
       }
-      if (req.method === "GET" && url.pathname === "/api/progress") {
-        return sendJson(res, 200, session.progress());
-      }
       if (req.method === "GET" && url.pathname === "/api/sessions/current") {
         return sendJson(res, 200, session.current());
       }

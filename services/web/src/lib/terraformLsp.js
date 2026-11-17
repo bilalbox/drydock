@@ -82,7 +82,10 @@ export async function startTerraformLanguageClient(workspaceRoot, { ensureModel 
       rootPath: workspaceRoot,
       workspaceFolders: [{ uri: rootUri, name: "workspace" }],
       capabilities: clientCapabilities(),
-      initializationOptions: { ignoreSingleFileWarning: true },
+      initializationOptions: {
+        ignoreSingleFileWarning: true,
+        experimentalFeatures: { prefillRequiredFields: true },
+      },
     });
     await connection.sendNotification("initialized", {});
   } catch (error) {

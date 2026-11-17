@@ -20,7 +20,7 @@ async function setup(t) {
     const fixture = argv.length > 3 ? "plan" : "state";
     return { exitCode: 0, stderr: "", stdout: argv[1] === "show" ? fs.readFileSync(path.join(root, `services/diagrams/test/fixtures/${fixture}.json`), "utf8") : "" };
   } };
-  const session = createSessionManager({ lock, workspacesDir: path.join(dir, "workspaces"), progressPath: path.join(dir, "progress.json"), toolbox,
+  const session = createSessionManager({ lock, workspacesDir: path.join(dir, "workspaces"), toolbox,
     emulators: { cloudNames: () => [], stopClouds: async () => {}, ensureClouds: async () => {}, resetCloud: async () => {} } });
   const app = createLabdServer({ session, catalog, lock });
   await new Promise(resolve => app.server.listen(0, "127.0.0.1", resolve));

@@ -41,7 +41,6 @@ COPY --from=web /web/dist /opt/drydock/web
 ENV CONTENT_DIR=/opt/drydock/content \
     LOCK_PATH=/opt/drydock/providers.lock.json \
     WEB_DIR=/opt/drydock/web \
-    PROGRESS_PATH=/data/progress.json \
     WORKSPACES_DIR=/workspaces \
     CHECKS_DIR=/opt/drydock/checks \
     TOOLBOX_CONTAINER=drydock-toolbox \
