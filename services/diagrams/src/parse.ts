@@ -34,6 +34,8 @@ interface TfConfigModule {
   module_calls?: Record<string, { module?: TfConfigModule }>;
 }
 interface TfDoc {
+  format_version?: string;
+  planned_values?: { root_module?: TfModule };
   values?: { root_module?: TfModule };
   prior_state?: { values?: { root_module?: TfModule } };
   resource_changes?: TfResourceChange[];
@@ -47,8 +49,8 @@ export class DiagramInputError extends Error {}
 export function buildModel(input: unknown): DiagramModel {
   if (!input || typeof input !== "object") throw new DiagramInputError("input is not a JSON object");
   const doc = input as TfDoc;
-  const isPlan = Array.isArray(doc.resource_changes);
-  if (!isPlan && !doc.values && !doc.prior_state) {
+  const isPlan = Array.isArray(doc.resource_changes) || !!doc.planned_values;
+  if (!isPlan && !doc.values && !doc.prior_state && !doc.format_version) {
     throw new DiagramInputError("input is neither terraform state nor plan JSON");
   }
 
@@ -63,6 +65,9 @@ export function buildModel(input: unknown): DiagramModel {
   }
 
   if (isPlan) {
+    for (const r of walkModule(doc.planned_values?.root_module)) {
+      if (r.mode === "managed" && !nodes.has(r.address)) nodes.set(r.address, makeNode(r.address, r.type, r.name, "none"));
+    }
     for (const rc of doc.resource_changes ?? []) {
       if (rc.mode !== "managed") continue;
       const node = nodes.get(rc.address) ?? makeNode(rc.address, rc.type, rc.name, "none");
@@ -83,7 +88,7 @@ export function buildModel(input: unknown): DiagramModel {
     ? configEdges(doc.configuration.root_module, nodes)
     : [];
   // State has no expressions, so fall back to matching ids/ARNs in attribute values.
-  if (!isPlan || edges.length === 0) edges.push(...valueEdges(stateResources));
+  edges.push(...valueEdges(stateResources));
 
   return { source: isPlan ? "plan" : "state", nodes: [...nodes.values()], edges: dedupe(edges) };
 }
@@ -166,10 +171,13 @@ function configEdges(root: TfConfigModule, nodes: Map<string, DiagramNode>): Dia
       const fromBase = prefix + res.address;
       const refs = [...collectRefs(res.expressions), ...(res.depends_on ?? [])];
       for (const ref of refs) {
-        const m = /^((?:data\.)?[a-z0-9_]+\.[A-Za-z0-9_-]+)/.exec(ref);
-        if (!m || m[1].startsWith("data.")) continue;
-        const targets = byBase.get(prefix + m[1]) ?? [];
-        for (const from of byBase.get(fromBase) ?? [])
+        if (ref.startsWith("data.")) continue;
+        const qualified = prefix + ref;
+        const exact = [...nodes.keys()].filter(address => qualified === address || qualified.startsWith(address + "."));
+        const baseRef = qualified.replace(/\[[^\]]*\]/g, "");
+        const targets = exact.length ? exact : [...byBase.keys()].filter(base => baseRef === base || baseRef.startsWith(base + ".")).flatMap(base => byBase.get(base)!);
+        const sources = nodes.has(fromBase) ? [fromBase] : byBase.get(fromBase.replace(/\[[^\]]*\]/g, "")) ?? [];
+        for (const from of sources)
           for (const to of targets) if (to !== from) edges.push({ from, to });
       }
     }

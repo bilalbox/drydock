@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { createDiagramRenderer } from "./diagram.js";
 import { randomUUID } from "node:crypto";
 import { createEmulatorManager } from "./emulatorSet.js";
 import { attachTerraformLsp } from "./terraformLsp.js";
@@ -37,6 +38,7 @@ export function createSessionManager({
     pruneWorkspaces(workspacesDir);
   }
 
+  const renderDiagram = createDiagramRenderer();
   let active = null;
   let chain = Promise.resolve();
 
@@ -114,6 +116,7 @@ export function createSessionManager({
   }
 
   return {
+    diagram: (mode) => enqueue(() => renderDiagram(requireActive(), mode, toolbox.run)),
     current: () => (active ? publicSession(active) : null),
     progress: () => loadProgress(progressPath),
     open: (lab) => enqueue(() => openNow(lab)),

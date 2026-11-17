@@ -3,3 +3,5 @@ data
 **/node_modules
 services/web/dist
 *.log
+
+services/diagrams/assets

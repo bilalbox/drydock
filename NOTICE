@@ -1,0 +1,14 @@
+Drydock's original source code is licensed under the MIT License.
+
+AWS Architecture Icons are provided by Amazon Web Services, Inc. and remain
+subject to AWS's terms. They are downloaded from the official AWS pack during
+build, are not committed to this repository, and are not covered by Drydock's
+MIT License. See the icon usage guidance and terms linked at:
+https://aws.amazon.com/architecture/icons/
+
+Graph layout uses elkjs, distributed under the Eclipse Public License 2.0
+(or its stated alternative license). Drydock uses it under EPL-2.0.
+https://github.com/kieler/elkjs
+https://www.eclipse.org/legal/epl-2.0/
+
+No TerraVision code or assets are used.

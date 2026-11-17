@@ -5,6 +5,14 @@ RUN npm ci
 COPY services/web/ ./
 RUN npm run build
 
+FROM node:24-bookworm-slim AS diagrams
+WORKDIR /opt/drydock/diagrams
+COPY services/diagrams/package.json services/diagrams/package-lock.json ./
+RUN npm ci --ignore-scripts
+COPY services/diagrams/src ./src
+COPY services/diagrams/scripts ./scripts
+RUN npm run icons && npm prune --omit=dev --ignore-scripts
+
 FROM node:24-bookworm-slim
 ARG TARGETARCH=amd64
 ARG TERRAFORM_VERSION=1.17.2
@@ -26,6 +34,7 @@ WORKDIR /opt/drydock/labd
 COPY services/labd/package.json services/labd/package-lock.json ./
 RUN npm ci --omit=dev
 COPY services/labd/src ./src
+COPY --from=diagrams /opt/drydock/diagrams /opt/drydock/diagrams
 COPY content /opt/drydock/content
 COPY providers.lock.json /opt/drydock/providers.lock.json
 COPY --from=web /web/dist /opt/drydock/web

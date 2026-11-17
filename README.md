@@ -71,3 +71,49 @@ Azure, GCP, and OCI provider bundles are generated and covered by unit tests. Th
 - `services/labd` — catalog, sessions, emulator lifecycle, grader, inspector gate, terminal
 - `services/toolbox` — Terraform, provider mirror, and the four CLIs
 - `services/web` — course shell
+
+## Visual architecture
+
+Start an AWS lab and open **Visual**. **State** draws the resources recorded by
+Terraform. **Plan** runs a fresh `terraform plan -refresh=true -lock=false
+-input=false` and shows proposed creates (green), updates (amber), deletes
+(red ghosts), and replacements (purple). An orange dashed outline marks drift
+independently of the planned action. Hover a resource or configuration badge
+for attribute changes; sensitive attributes are redacted.
+
+Resources sit inside their subnet and VPC when their references identify a
+parent. Configuration resources such as bucket versioning fold into badges.
+Unmapped resource types use an original generic icon. State references are an
+id/ARN matching heuristic, so this is an aid to understanding, not proof of
+connectivity or a substitute for the Inspector. Grading still reads the emulator.
+Use **Refresh diagram** after editing or applying Terraform. Plan mode never
+applies changes, but refreshes the emulator through Terraform and can take time.
+It does not acquire a state lock; wait for terminal operations to finish first.
+
+`GET /api/diagram?mode=state|plan` returns a standalone SVG for the active
+session. Commands run in that session's toolbox workspace. Rendered SVG is
+cached by workspace, mode, and the hash of the Terraform JSON. Terraform is
+queried on each request, including a fresh plan in plan mode, so source edits
+and remote drift cannot be hidden by the render cache. Temporary saved plans
+are removed after use. The Visual tab loads only when selected.
+
+The Docker build installs `services/diagrams` and downloads the official AWS
+icons. For local development, use Node 24:
+
+```sh
+cd services/diagrams
+npm ci --ignore-scripts
+npm run icons
+npm run typecheck
+npm test
+```
+
+If AWS rotates its icon archive and the download returns 404, update `PACK_URL`
+in `services/diagrams/scripts/fetch-aws-icons.ts` from the official AWS icon page.
+Generated `assets/` remain ignored by Git and Docker's build context. Original
+source is MIT licensed; vendor icons and elkjs retain their own terms (see
+`NOTICE`). No TerraVision code or assets are used.
+
+Diagram fixtures are synthetic schema examples. Real toolbox captures covering
+all plan actions, Floci drift, and module/index references remain an integration
+validation task; they have not been verified against a running emulator.

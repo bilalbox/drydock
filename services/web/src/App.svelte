@@ -1,6 +1,7 @@
 <script>
   import { onMount } from "svelte";
   import Editor from "./lib/Editor.svelte";
+  import Visual from "./lib/Visual.svelte";
   import Terminal from "./lib/Terminal.svelte";
   import { renderMarkdown } from "./lib/markdown.js";
 
@@ -174,6 +175,7 @@
       if (labelledBy === "tab-editor") tab = "editor";
       else if (labelledBy === "tab-terminal") tab = "terminal";
       else if (labelledBy === "tab-inspector") tab = "inspector";
+      else if (labelledBy === "tab-visual") tab = "visual";
     };
     node.addEventListener("beforematch", onMatch);
     return () => node.removeEventListener("beforematch", onMatch);
@@ -339,10 +341,20 @@
               {@attach selectedFlag(tab === "inspector")}
               onfocus={(event) => chooseTab("inspector", event)}
             >Inspector</button>
+            <!-- svelte-ignore a11y_role_supports_aria_props_implicit -->
+            <button
+              type="button"
+              id="tab-visual"
+              aria-selected={tab === "visual" ? "true" : "false"}
+              {@attach selectedFlag(tab === "visual")}
+              onfocus={(event) => chooseTab("visual", event)}
+            >Visual</button>
           </div>
           <p class="tabs-note">
             {#if tab === "editor"}
               Saved files are what terraform apply reads.
+            {:else if tab === "visual"}
+              Architecture from Terraform state and planned changes.
             {:else if tab === "inspector"}
               Read-only. Change resources with Terraform.
             {:else}
@@ -367,6 +379,15 @@
               {/key}
             {:else}
               <p class="empty">Start the lab to open a shell with Terraform and the cloud CLIs.</p>
+            {/if}
+          </div>
+          <div role="tabpanel" aria-labelledby="tab-visual" {@attach conceal(tab !== "visual")}>
+            {#if session}
+              {#key session.id}
+                <Visual sessionId={session.id} active={tab === "visual"} />
+              {/key}
+            {:else}
+              <p class="empty">Start the lab to view its architecture.</p>
             {/if}
           </div>
           <div role="tabpanel" aria-labelledby="tab-inspector" {@attach conceal(tab !== "inspector")}>
