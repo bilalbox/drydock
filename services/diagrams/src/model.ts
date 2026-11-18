@@ -25,6 +25,8 @@ export interface DiagramNode {
   drifted: boolean;
   changes: AttrChange[];
   driftChanges: AttrChange[];
+  /** Where the block is declared, e.g. main.tf:12. Set for configuration diagrams. */
+  location?: string;
 }
 
 export interface DiagramEdge {
@@ -33,7 +35,7 @@ export interface DiagramEdge {
 }
 
 export interface DiagramModel {
-  source: "state" | "plan";
+  source: "state" | "plan" | "config";
   nodes: DiagramNode[];
   /** `from` depends on / references `to`. */
   edges: DiagramEdge[];

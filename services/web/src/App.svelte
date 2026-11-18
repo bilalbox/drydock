@@ -1,10 +1,12 @@
 <script>
-  import { onMount } from "svelte";
+  import { onMount, tick } from "svelte";
   import Editor from "./lib/Editor.svelte";
   import Visual from "./lib/Visual.svelte";
   import Terminal from "./lib/Terminal.svelte";
   import { renderMarkdown } from "./lib/markdown.js";
   import { PROGRESS_KEY, markStarted, readProgress, recordAttempt, writeProgress } from "./lib/progress.js";
+
+  const LAYOUT_KEY = "drydock.layout";
 
   let catalog = $state(null);
   let progress = $state(storedProgress());
@@ -13,7 +15,18 @@
   let attempt = $state(null);
   let busy = $state("");
   let error = $state("");
-  let tab = $state("terminal");
+  let tab = $state("workspace");
+  let layout = $state(storedLayout());
+  let terminalMounted = $state(false);
+  let diagramRevision = $state(0);
+  let ideNode = $state();
+  let terminalNode = $state();
+  let editorRef = $state();
+  let terminalRef = $state();
+
+  $effect(() => {
+    if (session && layout.terminal) terminalMounted = true;
+  });
 
   let current = $derived.by(() => {
     if (!catalog || route.name !== "lab") return null;
@@ -62,6 +75,116 @@
     const match = hash.match(/^\/lab\/(.+)$/);
     if (match) return { name: "lab", labId: decodeURIComponent(match[1]) };
     return { name: "home" };
+  }
+
+  function storedLayout() {
+    const defaults = { terminal: true, diagram: false, terminalHeight: 260, diagramShare: 45 };
+    try {
+      const saved = JSON.parse(localStorage.getItem(LAYOUT_KEY) ?? "{}");
+      return {
+        terminal: typeof saved.terminal === "boolean" ? saved.terminal : defaults.terminal,
+        diagram: typeof saved.diagram === "boolean" ? saved.diagram : defaults.diagram,
+        terminalHeight: Number.isFinite(saved.terminalHeight) ? saved.terminalHeight : defaults.terminalHeight,
+        diagramShare: Number.isFinite(saved.diagramShare) ? saved.diagramShare : defaults.diagramShare,
+      };
+    } catch {
+      return defaults;
+    }
+  }
+
+  function setLayout(patch) {
+    layout = { ...layout, ...patch };
+    try {
+      localStorage.setItem(LAYOUT_KEY, JSON.stringify(layout));
+    } catch {
+      // Layout is a convenience; it still applies for this page view.
+    }
+  }
+
+  /** Ctrl+` follows VS Code: show and focus, focus if shown elsewhere, hide if focused. */
+  async function toggleTerminal() {
+    if (!session) return;
+    const focused = terminalNode?.contains(document.activeElement);
+    if (tab === "workspace" && layout.terminal && focused) {
+      setLayout({ terminal: false });
+      editorRef?.focus();
+      return;
+    }
+    tab = "workspace";
+    setLayout({ terminal: true });
+    terminalMounted = true;
+    await tick();
+    requestAnimationFrame(() => terminalRef?.focus());
+  }
+
+  function onShortcut(event) {
+    if (event.code !== "Backquote" || !event.ctrlKey || event.altKey || event.metaKey || event.shiftKey) return;
+    if (route.name !== "lab" || !session) return;
+    // Capture phase, so Monaco and xterm never see the chord.
+    event.preventDefault();
+    event.stopPropagation();
+    toggleTerminal();
+  }
+
+  function clamp(value, min, max) {
+    return Math.min(max, Math.max(min, value));
+  }
+
+  function splitter(kind) {
+    return (node) => {
+      const limits = () => {
+        const box = ideNode?.getBoundingClientRect();
+        return kind === "terminal"
+          ? { min: 120, max: Math.max(120, (box?.height ?? 600) - 160) }
+          : { min: 20, max: 75 };
+      };
+      const apply = (value) => {
+        const { min, max } = limits();
+        setLayout(kind === "terminal" ? { terminalHeight: Math.round(clamp(value, min, max)) } : { diagramShare: clamp(value, min, max) });
+      };
+      const onMove = (event) => {
+        const box = ideNode?.getBoundingClientRect();
+        if (!box) return;
+        if (kind === "terminal") apply(box.bottom - event.clientY);
+        else apply(((box.right - event.clientX) / box.width) * 100);
+      };
+      const onDown = (event) => {
+        if (event.button !== 0) return;
+        event.preventDefault();
+        node.setPointerCapture(event.pointerId);
+        node.addEventListener("pointermove", onMove);
+        document.body.classList.add(kind === "terminal" ? "resizing-rows" : "resizing-cols");
+      };
+      const onUp = (event) => {
+        if (node.hasPointerCapture(event.pointerId)) node.releasePointerCapture(event.pointerId);
+        node.removeEventListener("pointermove", onMove);
+        document.body.classList.remove("resizing-rows", "resizing-cols");
+      };
+      const onKey = (event) => {
+        const step = event.shiftKey ? 5 : 1;
+        if (kind === "terminal") {
+          if (event.key === "ArrowUp") apply(layout.terminalHeight + 20 * step);
+          else if (event.key === "ArrowDown") apply(layout.terminalHeight - 20 * step);
+          else return;
+        } else {
+          if (event.key === "ArrowLeft") apply(layout.diagramShare + 2 * step);
+          else if (event.key === "ArrowRight") apply(layout.diagramShare - 2 * step);
+          else return;
+        }
+        event.preventDefault();
+      };
+      node.addEventListener("pointerdown", onDown);
+      node.addEventListener("pointerup", onUp);
+      node.addEventListener("pointercancel", onUp);
+      node.addEventListener("keydown", onKey);
+      return () => {
+        node.removeEventListener("pointerdown", onDown);
+        node.removeEventListener("pointerup", onUp);
+        node.removeEventListener("pointercancel", onUp);
+        node.removeEventListener("keydown", onKey);
+        node.removeEventListener("pointermove", onMove);
+      };
+    };
   }
 
   function storedProgress() {
@@ -123,7 +246,7 @@
       }
       session = body;
       attempt = null;
-      tab = "editor";
+      tab = "workspace";
       remember(markStarted(progress, labId));
     });
   }
@@ -195,17 +318,15 @@
   function syncFind(node) {
     const onMatch = (event) => {
       const labelledBy = event.target?.getAttribute?.("aria-labelledby");
-      if (labelledBy === "tab-editor") tab = "editor";
-      else if (labelledBy === "tab-terminal") tab = "terminal";
+      if (labelledBy === "tab-workspace") tab = "workspace";
       else if (labelledBy === "tab-inspector") tab = "inspector";
-      else if (labelledBy === "tab-visual") tab = "visual";
     };
     node.addEventListener("beforematch", onMatch);
     return () => node.removeEventListener("beforematch", onMatch);
   }
 </script>
 
-<svelte:window onstorage={syncStoredProgress} />
+<svelte:window onstorage={syncStoredProgress} onkeydowncapture={onShortcut} />
 
 <div class="shell">
   <header>
@@ -345,19 +466,11 @@
             <!-- svelte-ignore a11y_role_supports_aria_props_implicit -->
             <button
               type="button"
-              id="tab-editor"
-              aria-selected={tab === "editor" ? "true" : "false"}
-              {@attach selectedFlag(tab === "editor")}
-              onfocus={(event) => chooseTab("editor", event)}
-            >Editor</button>
-            <!-- svelte-ignore a11y_role_supports_aria_props_implicit -->
-            <button
-              type="button"
-              id="tab-terminal"
-              aria-selected={tab === "terminal" ? "true" : "false"}
-              {@attach selectedFlag(tab === "terminal")}
-              onfocus={(event) => chooseTab("terminal", event)}
-            >Terminal</button>
+              id="tab-workspace"
+              aria-selected={tab === "workspace" ? "true" : "false"}
+              {@attach selectedFlag(tab === "workspace")}
+              onfocus={(event) => chooseTab("workspace", event)}
+            >Workspace</button>
             <!-- svelte-ignore a11y_role_supports_aria_props_implicit -->
             <button
               type="button"
@@ -366,53 +479,100 @@
               {@attach selectedFlag(tab === "inspector")}
               onfocus={(event) => chooseTab("inspector", event)}
             >Inspector</button>
-            <!-- svelte-ignore a11y_role_supports_aria_props_implicit -->
-            <button
-              type="button"
-              id="tab-visual"
-              aria-selected={tab === "visual" ? "true" : "false"}
-              {@attach selectedFlag(tab === "visual")}
-              onfocus={(event) => chooseTab("visual", event)}
-            >Visual</button>
           </div>
-          <p class="tabs-note">
-            {#if tab === "editor"}
-              Saved files are what terraform apply reads.
-            {:else if tab === "visual"}
-              Architecture from Terraform state and planned changes.
-            {:else if tab === "inspector"}
-              Read-only. Change resources with Terraform.
-            {:else}
-              Terraform and the cloud CLIs.
-            {/if}
-          </p>
+          {#if tab === "workspace" && session}
+            <div class="view-toggles" role="toolbar" aria-label="Workspace panels">
+              <button
+                type="button"
+                aria-pressed={layout.diagram ? "true" : "false"}
+                onclick={() => setLayout({ diagram: !layout.diagram })}
+              >Diagram</button>
+              <button
+                type="button"
+                aria-pressed={layout.terminal ? "true" : "false"}
+                aria-keyshortcuts="Control+`"
+                title="Toggle terminal (Ctrl+`)"
+                onclick={toggleTerminal}
+              >Terminal <kbd>Ctrl+`</kbd></button>
+            </div>
+          {:else}
+            <p class="tabs-note">
+              {#if tab === "inspector"}
+                Read-only. Change resources with Terraform.
+              {:else}
+                Saved files are what terraform apply reads.
+              {/if}
+            </p>
+          {/if}
         </div>
         <div class="panes" {@attach syncFind}>
-          <div role="tabpanel" aria-labelledby="tab-editor" {@attach conceal(tab !== "editor")}>
+          <div role="tabpanel" aria-labelledby="tab-workspace" {@attach conceal(tab !== "workspace")}>
             {#if session}
               {#key session.id}
-                <Editor sessionId={session.id} active={tab === "editor"} />
+                <div class="ide" bind:this={ideNode} style:--terminal-height="{layout.terminalHeight}px">
+                  <div class={{ "ide-main": true, split: layout.diagram }} style:--diagram-share="{layout.diagramShare}%">
+                    <div class="ide-editor">
+                      <Editor
+                        bind:this={editorRef}
+                        sessionId={session.id}
+                        active={tab === "workspace"}
+                        onsave={() => (diagramRevision += 1)}
+                      />
+                    </div>
+                    {#if layout.diagram}
+                      <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
+                      <div
+                        class="splitter vertical"
+                        role="separator"
+                        tabindex="0"
+                        aria-label="Resize diagram"
+                        aria-orientation="vertical"
+                        aria-valuemin="20"
+                        aria-valuemax="75"
+                        aria-valuenow={Math.round(layout.diagramShare)}
+                        {@attach splitter("diagram")}
+                      ></div>
+                      <div class="ide-diagram">
+                        <Visual
+                          sessionId={session.id}
+                          active={tab === "workspace"}
+                          revision={diagramRevision}
+                          onclose={() => setLayout({ diagram: false })}
+                        />
+                      </div>
+                    {/if}
+                  </div>
+                  {#if terminalMounted}
+                    <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
+                    <div
+                      class="splitter horizontal"
+                      role="separator"
+                      tabindex="0"
+                      aria-label="Resize terminal"
+                      aria-orientation="horizontal"
+                      aria-valuemin="120"
+                      aria-valuenow={layout.terminalHeight}
+                      hidden={!layout.terminal}
+                      {@attach splitter("terminal")}
+                    ></div>
+                    <div class="ide-terminal" bind:this={terminalNode} hidden={!layout.terminal}>
+                      <div class="panel-bar">
+                        <p>Terminal</p>
+                        <p class="panel-note">Terraform and the cloud CLIs</p>
+                        <button
+                          type="button"
+                          aria-label="Hide terminal"
+                          title="Hide terminal (Ctrl+`)"
+                          onclick={() => { setLayout({ terminal: false }); editorRef?.focus(); }}
+                        >×</button>
+                      </div>
+                      <Terminal bind:this={terminalRef} />
+                    </div>
+                  {/if}
+                </div>
               {/key}
             {:else}
-              <p class="empty">Start the lab to edit its Terraform files.</p>
-            {/if}
-          </div>
-          <div role="tabpanel" aria-labelledby="tab-terminal" {@attach conceal(tab !== "terminal")}>
-            {#if session}
-              {#key session.id}
-                <Terminal />
-              {/key}
-            {:else}
-              <p class="empty">Start the lab to open a shell with Terraform and the cloud CLIs.</p>
-            {/if}
-          </div>
-          <div role="tabpanel" aria-labelledby="tab-visual" {@attach conceal(tab !== "visual")}>
-            {#if session}
-              {#key session.id}
-                <Visual sessionId={session.id} active={tab === "visual"} />
-              {/key}
-            {:else}
-              <p class="empty">Start the lab to view its architecture.</p>
+              <p class="empty">Start the lab to edit its Terraform files, draw its diagram and open a shell.</p>
             {/if}
           </div>
           <div role="tabpanel" aria-labelledby="tab-inspector" {@attach conceal(tab !== "inspector")}>

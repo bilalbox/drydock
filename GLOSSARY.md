@@ -64,8 +64,8 @@ _Avoid_: Submission, run, grade
 The read-only view of resources the emulator currently holds.
 _Avoid_: Console, clickops, management UI
 
-**Visual**:
-The diagram of resources in the session's Terraform state, or of the changes a fresh plan would make.
+**Diagram**:
+The architecture drawing of the resources and modules declared in the workspace's `.tf` files, shown beside the editor.
 _Avoid_: Architecture map, graph view
 
 **Cloud**:

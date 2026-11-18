@@ -6,7 +6,7 @@ The catalog has 7 paths, 17 scenarios, and 41 labs. Every lab targets AWS. Artif
 
 ## Screenshots
 
-The home page is the catalog. A lab page puts the brief on the left and four tools on the right: Editor, Terminal, Inspector, and Visual. Check asks the emulator whether the lab's predicates hold.
+The home page is the catalog. A lab page puts the brief on the left and an IDE-style workspace on the right: the file tree and editor, an optional architecture diagram beside them, and a terminal docked below (toggle it with Ctrl+`). The Inspector has its own tab. Check asks the emulator whether the lab's predicates hold.
 
 ![Catalog of paths, scenarios, and labs, with passed labs marked](docs/screenshots/lab-list.png)
 
@@ -24,9 +24,9 @@ The terminal is a shell in the toolbox: Terraform and the cloud CLIs, pointed at
 
 The inspector opens on the cloud service the lab names. The proxy allows reads. Create and delete actions are removed from the console schema.
 
-![Visual tab showing Terraform state for a VPC, subnets, and ECS services](docs/screenshots/visual.png)
+![Diagram panel showing a VPC, subnets, and ECS services](docs/screenshots/visual.png)
 
-Visual draws the session's Terraform state, or a fresh plan. Creates, updates, deletes, replacements, and drift are marked on the diagram. Details are below, under [Visual architecture](#visual-architecture).
+The Diagram panel draws the workspace's `.tf` files and redraws as you save. Details are below, under [Visual architecture](#visual-architecture).
 
 ![Check panel with three failed emulator predicates](docs/screenshots/check.png)
 
@@ -116,18 +116,18 @@ The published labs all set `clouds: [aws]`. Azure, GCP, and OCI provider bundles
 - `content/` — paths, scenarios, labs, checks, seeds, and the hidden solutions
 - `services/labd` — catalog, sessions, emulator lifecycle, grader, inspector gate, terminal, Terraform language server
 - `services/toolbox` — Terraform, provider mirror, and the four CLIs
-- `services/diagrams` — state and plan diagrams for the Visual tab
+- `services/diagrams` — architecture diagrams for the workspace Diagram panel
 - `services/web` — lab shell, editor, and per-browser lab progress
 - `docs/screenshots/` — the images in this file
 - `GLOSSARY.md` — the names this project uses for a path, a lab, a check, and the rest
 
 ## Visual architecture
 
-Start an AWS lab and open **Visual**. **State** draws the resources recorded by Terraform. **Plan** runs a fresh `terraform plan -refresh=true -lock=false -input=false` and shows proposed creates (green), updates (amber), deletes (red ghosts), and replacements (purple). An orange dashed outline marks drift independently of the planned action. Hover a resource or configuration badge for attribute changes; sensitive attributes are redacted.
+Start a lab and press **Diagram** in the workspace toolbar. The panel parses the root module's `.tf` files directly: every `resource` and `module` block becomes a node, and references between them (`aws_vpc.main.id`, `module.x.y`, `depends_on`) become edges. It never runs Terraform, so it works before `init` or `apply` and follows each save from the editor. Hover a resource for its address and the file and line that declare it.
 
-Resources sit inside their subnet and VPC when their references identify a parent. Configuration resources such as bucket versioning fold into badges. Unmapped resource types use an original generic icon. State references are an id/ARN matching heuristic, so this is an aid to understanding, not proof of connectivity or a substitute for the Inspector. Grading still reads the emulator. Use **Refresh diagram** after editing or applying Terraform. Plan mode never applies changes, but refreshes the emulator through Terraform and can take time. It does not acquire a state lock; wait for terminal operations to finish first.
+Resources sit inside their subnet and VPC when their references identify a parent. Configuration resources such as bucket versioning fold into badges. Unmapped resource types use an original generic icon. The diagram shows what the configuration declares, not what exists; the Inspector and Check read the emulator.
 
-`GET /api/diagram?mode=state|plan` returns a standalone SVG for the active session. Commands run in that session's toolbox workspace. Rendered SVG is cached by workspace, mode, and the hash of the Terraform JSON. Terraform is queried on each request, including a fresh plan in plan mode, so source edits and remote drift cannot be hidden by the render cache. Temporary saved plans are removed after use. The Visual tab loads only when selected.
+`GET /api/diagram` returns a standalone SVG for the active session, cached by the hash of the workspace's `.tf` files. The library still accepts `terraform show -json` state and plan documents (`renderDiagram`), though labd no longer uses that path.
 
 The Docker build installs `services/diagrams` and downloads the official AWS icons. For local development, use Node 24:
 

@@ -3,11 +3,17 @@
   import { Terminal } from "@xterm/xterm";
   import "@xterm/xterm/css/xterm.css";
 
+  let term;
+
+  export function focus() {
+    term?.focus();
+  }
+
   /**
    * @param {HTMLElement} node
    */
   function openTerminal(node) {
-    const term = new Terminal({
+    term = new Terminal({
       cursorBlink: true,
       fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
       fontSize: 14,
@@ -62,6 +68,7 @@
       observer.disconnect();
       socket.close();
       term.dispose();
+      term = undefined;
     };
   }
 </script>

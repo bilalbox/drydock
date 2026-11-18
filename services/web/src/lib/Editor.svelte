@@ -2,7 +2,11 @@
   import { createWorkspaceEditor, languageFor, monaco } from "./monaco.js";
   import { startTerraformLanguageClient } from "./terraformLsp.js";
 
-  let { sessionId, active = true } = $props();
+  let { sessionId, active = true, onsave } = $props();
+
+  export function focus() {
+    editor?.focus();
+  }
 
   let tree = $state([]);
   let currentPath = $state("");
@@ -235,6 +239,7 @@
       return;
     }
     savedText = text;
+    onsave?.(currentPath);
     dirty = editor.getValue() !== savedText;
     visual = dirty ? "Unsaved" : "Saved";
     if (announce && !dirty) announcement = `Saved ${currentPath}`;

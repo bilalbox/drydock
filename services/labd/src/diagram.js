@@ -1,33 +1,24 @@
-import { createHash, randomUUID } from "node:crypto";
-import fs from "node:fs/promises";
-import path from "node:path";
-import { renderDiagram } from "../../diagrams/src/render.ts";
+import { createHash } from "node:crypto";
+import { buildConfigModel } from "../../diagrams/src/hcl.ts";
+import { renderModel } from "../../diagrams/src/render.ts";
+import { listWorkspaceFiles, readWorkspaceFile } from "./workspace.js";
 
-/** Cache only rendered output. Always refresh plans so remote drift and edited files are observed. */
+/**
+ * Renders the root module's .tf files as an architecture diagram.
+ * Reads configuration only, so it never runs Terraform and works before init or apply.
+ */
 export function createDiagramRenderer() {
   let cached;
-  return async (session, mode, run) => {
-    const opts = { cwd: session.workspace, env: session.env };
-    const planfile = path.join(session.workspace, ".drydock", `diagram-${randomUUID()}.tfplan`);
-    async function command(argv) {
-      const result = await run(argv, opts);
-      if (result.exitCode !== 0) throw new Error("Terraform could not produce the diagram. Check the workspace in the Terminal.");
-      return result.stdout;
-    }
-    try {
-      if (mode === "plan") await command(["terraform", "plan", "-refresh=true", "-lock=false", "-input=false", "-no-color", `-out=${planfile}`]);
-      const json = await command(["terraform", "show", "-json", ...(mode === "plan" ? [planfile] : [])]);
-      const hash = createHash("sha256").update(json).digest("hex");
-      const key = `${session.workspace}:${mode}:${hash}`;
-      if (cached?.key === key) return cached.svg;
-      let svg;
-      try { svg = await renderDiagram(JSON.parse(json)); }
-      catch { throw new Error("Terraform returned an unsupported diagram. Check the workspace in the Terminal."); }
-      cached = { key, svg };
-      return svg;
-    } finally {
-      // The path is generated here and stays inside the active workspace; plans can contain secrets.
-      if (mode === "plan") await fs.unlink(planfile).catch(error => { if (error.code !== "ENOENT") throw error; });
-    }
+  return async (session) => {
+    const files = listWorkspaceFiles(session.workspace)
+      .filter((node) => node.type === "file" && node.name.endsWith(".tf"))
+      .map((node) => readWorkspaceFile(session.workspace, node.path));
+    const hash = createHash("sha256");
+    for (const file of files) hash.update(file.path).update("\0").update(file.text).update("\0");
+    const key = `${session.workspace}:${hash.digest("hex")}`;
+    if (cached?.key === key) return cached.svg;
+    const svg = await renderModel(buildConfigModel(files));
+    cached = { key, svg };
+    return svg;
   };
 }

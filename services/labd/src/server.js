@@ -44,9 +44,7 @@ export function createLabdServer({
     try {
       const url = new URL(req.url ?? "/", "http://localhost");
       if (req.method === "GET" && url.pathname === "/api/diagram") {
-        const mode = url.searchParams.get("mode") ?? "state";
-        if (!["state", "plan"].includes(mode)) return sendJson(res, 400, { error: "Mode must be state or plan" });
-        const svg = await session.diagram(mode);
+        const svg = await session.diagram();
         res.writeHead(200, { "content-type": "image/svg+xml; charset=utf-8", "cache-control": "no-store", "x-content-type-options": "nosniff", "content-security-policy": "default-src 'none'; img-src data:; sandbox" });
         return res.end(svg);
       }

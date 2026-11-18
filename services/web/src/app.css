@@ -374,6 +374,124 @@ button:focus-visible, a:focus-visible {
 
 .empty { color: #d9cbb8; padding: 1.5rem; }
 
+.view-toggles { display: flex; gap: 0.35rem; margin-inline-start: auto; }
+
+.view-toggles button {
+  min-block-size: 1.75rem;
+  border-color: #8c7462;
+  background: transparent;
+  color: #d9cbb8;
+  padding: 0.25rem 0.6rem;
+}
+
+.view-toggles button[aria-pressed="true"] {
+  background: #4a382c;
+  border-color: #c9a98f;
+  color: #fffaf3;
+}
+
+kbd {
+  margin-inline-start: 0.3rem;
+  padding: 0 0.3rem;
+  border: 1px solid currentColor;
+  border-radius: 3px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.7rem;
+  opacity: 0.75;
+}
+
+/* IDE: editor and diagram side by side, terminal docked below. */
+.ide {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.ide-main {
+  flex: 1;
+  min-height: 8rem;
+  display: flex;
+}
+
+.ide-editor {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+}
+
+.ide-main.split .ide-editor { flex: 1 1 calc(100% - var(--diagram-share)); }
+
+.ide-diagram {
+  flex: 0 0 var(--diagram-share);
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+}
+
+.ide-terminal {
+  flex: 0 0 var(--terminal-height);
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--term);
+}
+
+.ide-terminal[hidden], .splitter[hidden] { display: none; }
+
+.ide-terminal .term { padding: 0.25rem 0 0 0.5rem; }
+
+.panel-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.2rem 0.4rem 0.2rem 0.75rem;
+  color: #d9cbb8;
+  font-family: "Avenir Next", "Segoe UI", sans-serif;
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.panel-bar p { margin: 0; }
+.panel-bar .panel-note { color: #8c7c6c; text-transform: none; letter-spacing: 0; }
+
+.panel-bar button {
+  margin-inline-start: auto;
+  border: 0;
+  background: transparent;
+  color: #d9cbb8;
+  padding: 0 0.5rem;
+  font-size: 1.1rem;
+  line-height: 1.4;
+}
+
+.splitter {
+  flex: none;
+  background: var(--line);
+  touch-action: none;
+}
+
+.splitter.vertical { inline-size: 5px; cursor: col-resize; }
+.splitter.horizontal { block-size: 5px; cursor: row-resize; background: #3a302a; }
+.splitter:hover, .splitter:focus-visible { background: var(--rust); outline: none; }
+
+body.resizing-cols, body.resizing-cols * { cursor: col-resize !important; user-select: none; }
+body.resizing-rows, body.resizing-rows * { cursor: row-resize !important; user-select: none; }
+
+@media (pointer: coarse) {
+  .view-toggles button { min-block-size: 2.75rem; }
+  .splitter.vertical { inline-size: 12px; }
+  .splitter.horizontal { block-size: 12px; }
+}
+
+@media (max-width: 800px) {
+  .ide-main { flex-direction: column; }
+  .ide-main.split .ide-editor, .ide-diagram { flex: 1 1 50%; }
+  .splitter.vertical { display: none; }
+}
+
 .panes iframe {
   flex: 1;
   min-height: 0;

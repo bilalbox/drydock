@@ -113,7 +113,7 @@ export function createSessionManager({
   }
 
   return {
-    diagram: (mode) => enqueue(() => renderDiagram(requireActive(), mode, toolbox.run)),
+    diagram: () => renderDiagram(requireActive()),
     current: () => (active ? publicSession(active) : null),
     open: (lab) => enqueue(() => openNow(lab)),
     reset: () => enqueue(() => openNow(requireActive().lab)),
